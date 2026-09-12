@@ -1,0 +1,29 @@
+<div class="vid-auth-shell">
+  <div class="card elev-sm vid-auth-card">
+    <h3>Log in to VaultID</h3>
+
+    @if (error()) {
+      <div class="vid-notice vid-notice--error">{{ error() }}</div>
+    }
+
+    <form (ngSubmit)="submit()">
+      <div class="field">
+        <label for="identifier">Username or email</label>
+        <input class="input" id="identifier" name="identifier" [(ngModel)]="identifier" required autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" [(ngModel)]="password" required autocomplete="current-password" />
+      </div>
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Logging in…' : 'Log in' }}
+      </button>
+    </form>
+
+    <div class="vid-auth-links">
+      <a routerLink="/forgot-password">Forgot password?</a>
+      <a routerLink="/forgot-username">Forgot username?</a>
+    </div>
+    <p class="text-muted">No account? <a routerLink="/register">Register</a></p>
+  </div>
+</div>

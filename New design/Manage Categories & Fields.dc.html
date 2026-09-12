@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="_ds/nocturne-d424d14a-5fac-4700-bef0-279f578826f4/styles.css">
+  <script src="_ds/nocturne-d424d14a-5fac-4700-bef0-279f578826f4/_ds_bundle.js"></script>
+  <style>
+    body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-body); }
+    a { color: var(--color-accent-300); }
+    a:hover { color: var(--color-accent-100); }
+    .icon { display: inline-flex; flex: none; }
+    .icon svg { display: block; }
+    .iconbtn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-sm, 6px); border: 1px solid transparent; background: transparent; color: var(--color-accent-300); cursor: pointer; padding: 0; flex: none; }
+    .iconbtn:hover { background: var(--color-accent-800); color: var(--color-accent-100); }
+    .iconbtn:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 var(--space-5); border-bottom: 1px solid var(--color-neutral-700); }
+    .brand { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-heading); font-size: 16px; font-weight: 500; color: var(--color-text); }
+    .userpill { display: flex; align-items: center; gap: var(--space-3); font-size: 11px; color: var(--color-neutral-300); }
+    .userpill .name { background: var(--color-neutral-800); border: 1px solid var(--color-neutral-700); border-radius: var(--radius-sm,6px); padding: 6px 12px; color: var(--color-text); font-size: 13px; }
+
+    .shell { display: grid; grid-template-columns: 180px 1fr; min-height: calc(100vh - 56px); }
+    .sidebar { border-right: 1px solid var(--color-neutral-700); padding: var(--space-4) var(--space-2); }
+    .navitem { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md,8px); font-size: 13px; color: var(--color-neutral-300); cursor: pointer; margin-bottom: 2px; }
+    .navitem:hover { background: var(--color-neutral-800); }
+    .navitem.active { background: var(--color-accent-800); color: var(--color-accent-100); }
+
+    .main { padding: var(--space-6) var(--space-6); max-width: 980px; }
+    .pagehead h1 { font-family: var(--font-heading); font-size: 22px; font-weight: 500; margin: 0; }
+    .pagehead p { margin: 2px 0 0; font-size: 12px; color: var(--color-neutral-400); }
+
+    .tabs { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-4) 0 var(--space-4); }
+    .tab { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-md,8px); border: 1px solid var(--color-neutral-700); background: var(--color-neutral-900); color: var(--color-neutral-300); font-size: 13px; cursor: pointer; }
+    .tab:hover { background: var(--color-neutral-800); }
+    .tab.active { border-color: var(--color-accent-600); background: var(--color-accent-800); color: var(--color-accent-100); }
+
+    .card { border: 1px solid var(--color-neutral-700); border-radius: var(--radius-md,8px); overflow: hidden; background: var(--color-neutral-900); }
+    .cardhead { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); background: var(--color-accent-800); }
+    .cardhead .title { display: flex; align-items: center; gap: var(--space-2); font-size: 13px; font-weight: 500; color: var(--color-accent-100); }
+    .badge { font-size: 11px; color: var(--color-accent-200); border: 1px solid var(--color-accent-600); border-radius: 999px; padding: 3px 10px; }
+    .cardbody { padding: var(--space-4) var(--space-4); display: grid; gap: var(--space-3); }
+
+    .leafrow { display: flex; align-items: center; gap: var(--space-2); }
+    .leafrow .input { flex: 1; }
+
+    .fieldbox { display: grid; gap: 8px; }
+    .fieldhead { display: flex; align-items: center; gap: 6px; }
+    .fieldhead .label { flex: 1; font-size: 13px; color: var(--color-accent-200); }
+    .typebadge { font-size: 11px; color: var(--color-neutral-300); background: var(--color-neutral-800); border-radius: 999px; padding: 2px 9px; flex: none; }
+    .typebadge.hasval { color: var(--color-accent-300); background: var(--color-accent-900); }
+    .subfields { margin-left: var(--space-5); padding: var(--space-3) 0 0 var(--space-4); border-left: 2px solid var(--color-neutral-700); display: grid; gap: var(--space-3); }
+    .subfieldrow { display: flex; align-items: center; gap: var(--space-2); }
+    .subfieldrow .sublabel { width: 140px; flex: none; font-size: 12px; color: var(--color-neutral-300); }
+    .subfieldrow .input { flex: 1; }
+    .addrow { display: flex; align-items: center; gap: var(--space-2); }
+    .addrow input { flex: 1; }
+  </style>
+</helmet>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="icon" style="color:var(--color-accent-300)"><svg width="20" height="20" viewBox="0 0 256 256" fill="currentColor"><path d="M208,40H48A16,16,0,0,0,32,56v58.78c0,89.61,75.82,119.34,91,124.39a8,8,0,0,0,5.19,0c15.16-5.05,91-34.78,91-124.39V56A16,16,0,0,0,208,40Zm0,74.79c0,78.42-66.35,104.62-80,109.18-13.65-4.57-80-30.78-80-109.18V56H208Z"/></svg></span>
+    VaultID
+  </div>
+  <div class="userpill">
+    <span>ACTIVE VAULT USER</span>
+    <span class="name">Mazisi Dungelo</span>
+  </div>
+</div>
+
+<div class="shell">
+  <div class="sidebar">
+    <div class="navitem active">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,16V208H48V48ZM72,96h48a8,8,0,0,0,0-16H72a8,8,0,0,0,0,16Zm0,32h48a8,8,0,0,0,0-16H72a8,8,0,0,0,0,16Z"/></svg></span>
+      My Vault
+    </div>
+    <div class="navitem">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M176,160a39.89,39.89,0,0,0-28.62,12.09l-46.1-29.66a39.8,39.8,0,0,0,0-28.86l46.1-29.66A40,40,0,1,0,136,64a39.61,39.61,0,0,0,1.36,10.19L91.26,103.85a40,40,0,1,0,0,48.3l46.1,29.66A40,40,0,1,0,176,160Z"/></svg></span>
+      Sharing
+    </div>
+    <div class="navitem">
+      <span class="icon"><svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm8,104a8,8,0,0,1-8,8H88a8,8,0,0,1,0-16h32V72a8,8,0,0,1,16,0Z"/></svg></span>
+      Activity
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="pagehead">
+      <h1>My Vault</h1>
+      <p>Mazisi Dungelo · 0 active share(s)</p>
+    </div>
+
+    <div class="tabs">
+      <sc-for list="{{ categories }}" as="cat" hint-placeholder-count="3">
+        <div class="tab {{ cat.activeClass }}" onClick="{{ cat.select }}">
+          <span class="icon" dangerouslySetInnerHTML="{{ cat.iconHtml }}"></span>
+          {{ cat.name }}
+        </div>
+      </sc-for>
+      <button class="iconbtn" aria-label="Add category" onClick="{{ startAddCategory }}">
+        <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></svg>
+      </button>
+    </div>
+
+    <sc-if value="{{ addingCategory }}" hint-placeholder-val="{{ false }}">
+      <div class="addrow" style="margin-bottom: var(--space-4); max-width:360px;">
+        <input class="input" type="text" placeholder="Category name" value="{{ newCategoryName }}" onChange="{{ onNewCategoryChange }}" onKeyDown="{{ onNewCategoryKeyDown }}" autoFocus="{{ true }}" />
+        <button class="btn btn-primary" style="padding: 6px 10px;" onClick="{{ confirmAddCategory }}">Add</button>
+      </div>
+    </sc-if>
+
+    <div class="card">
+      <div class="cardhead">
+        <div class="title">
+          <span class="icon" dangerouslySetInnerHTML="{{ selectedCategory.iconHtml }}"></span>
+          {{ selectedCategory.name }} data
+        </div>
+        <div style="display:flex; align-items:center; gap: var(--space-2);">
+          <span class="badge">{{ selectedCategory.fieldCountLabel }}</span>
+          <button class="iconbtn" aria-label="Add field" onClick="{{ startAddField }}">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="cardbody">
+        <sc-if value="{{ addingFieldForCategory }}" hint-placeholder-val="{{ false }}">
+          <div class="addrow">
+            <input class="input" type="text" placeholder="Field name" value="{{ newFieldName }}" onChange="{{ onNewFieldChange }}" onKeyDown="{{ onNewFieldKeyDown }}" autoFocus="{{ true }}" />
+            <button class="btn btn-primary" style="padding: 6px 10px;" onClick="{{ confirmAddField }}">Add</button>
+          </div>
+        </sc-if>
+
+        <sc-for list="{{ fields }}" as="field" hint-placeholder-count="6">
+          <div class="fieldbox">
+            <div class="fieldhead">
+              <span class="label">{{ field.name }}</span>
+              <span class="typebadge {{ field.badgeClass }}">{{ field.typeLabel }}</span>
+              <button class="iconbtn" aria-label="Toggle" onClick="{{ field.toggle }}">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor" style="transform: {{ field.caretRotate }}; transition: transform 0.15s;"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg>
+              </button>
+              <button class="iconbtn" aria-label="Add subfield" onClick="{{ field.startAddSubfield }}">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"/></svg>
+              </button>
+              <button class="iconbtn" aria-label="Remove field" onClick="{{ field.remove }}">
+                <svg width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M216,48H176V40a24,24,0,0,0-24-24H104A24,24,0,0,0,80,40v8H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,16-16V64h8a8,8,0,0,0,0-16ZM96,40a8,8,0,0,1,8-8h48a8,8,0,0,1,8,8v8H96Zm96,168H64V64H192ZM112,104v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Zm48,0v64a8,8,0,0,1-16,0V104a8,8,0,0,1,16,0Z"/></svg>
+              </button>
+            </div>
+
+            <sc-if value="{{ field.expanded }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ field.showAsSubfields }}" hint-placeholder-val="{{ false }}">
+                <div class="subfields">
+                  <sc-for list="{{ field.subfields }}" as="sub" hint-placeholder-count="2">
+                    <div class="subfieldrow">
+                      <span class="sublabel">{{ sub.name }}</span>
+                      <input class="input" placeholder="—" />
+                      <button class="iconbtn" aria-label="Remove subfield" onClick="{{ sub.remove }}">
+                        <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg>
+                      </button>
+                    </div>
+                  </sc-for>
+
+                  <sc-if value="{{ field.addingSubfield }}" hint-placeholder-val="{{ false }}">
+                    <div class="addrow">
+                      <input class="input" type="text" placeholder="Subfield name" value="{{ field.newSubfieldName }}" onChange="{{ field.onNewSubfieldChange }}" onKeyDown="{{ field.onNewSubfieldKeyDown }}" autoFocus="{{ true }}" />
+                      <button class="btn btn-primary" style="padding: 6px 10px;" onClick="{{ field.confirmAddSubfield }}">Add</button>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ field.showAsLeaf }}" hint-placeholder-val="{{ true }}">
+                <div class="leafrow">
+                  <input class="input" placeholder="—" />
+                </div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const ICONS = {
+  bio: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M208,32H48A16,16,0,0,0,32,48V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V48A16,16,0,0,0,208,32Zm0,16V208H48V48ZM72,96h48a8,8,0,0,0,0-16H72a8,8,0,0,0,0,16Zm0,32h48a8,8,0,0,0,0-16H72a8,8,0,0,0,0,16Z"/></svg>',
+  edu: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L36,117.66V172a8,8,0,0,0,16,0V126.11l24,12.8V208a8,8,0,0,0,3.93,6.87C81.19,215.72,104.83,232,128,232a83.4,83.4,0,0,0,48.07-16.13A8,8,0,0,0,180,208V138.91l71.76-38.29a8,8,0,0,0,0-14.12ZM164,203.94A67.5,67.5,0,0,1,128,216a67.5,67.5,0,0,1-36-12.06V147.37l32.24,17.19a8,8,0,0,0,7.52,0L164,147.37ZM128,148.32,32.87,96,128,44.87,223.13,96Z"/></svg>',
+  health: '<svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M240,102c0,70-103.79,126.66-108.21,129a8,8,0,0,1-7.58,0C119.79,228.66,16,172,16,102A62,62,0,0,1,128,74.5,62,62,0,0,1,240,102Z"/></svg>',
+};
+
+class Component extends DCLogic {
+  state = {
+    categories: [
+      { id: 'bio', name: 'Biographical', icon: 'bio', fields: [
+        { id: 'fullname', name: 'Full name', subfields: [], expanded: true },
+        { id: 'name', name: 'Name', expanded: true, subfields: [
+          { id: 'first', name: 'First name' }, { id: 'middle', name: 'Middle name' }, { id: 'last', name: 'Last name' }
+        ] },
+        { id: 'idnum', name: 'ID or passport number', subfields: [], expanded: true },
+        { id: 'dob', name: 'Date of birth', subfields: [], expanded: true },
+        { id: 'physical', name: 'Physical address', expanded: false, subfields: [
+          { id: 'line1', name: 'Line 1' }, { id: 'line2', name: 'Line 2' }, { id: 'line3', name: 'Line 3' },
+          { id: 'suburb', name: 'Suburb' }, { id: 'city', name: 'City' }, { id: 'postal', name: 'Postal code' }
+        ] },
+        { id: 'contact', name: 'Contact details', expanded: false, subfields: [
+          { id: 'phone', name: 'Phone number' }, { id: 'email', name: 'Email address' }
+        ] },
+        { id: 'nationality', name: 'Nationality', subfields: [], expanded: true },
+      ] },
+      { id: 'edu', name: 'Educational', icon: 'edu', fields: [
+        { id: 'institution', name: 'Institution', subfields: [], expanded: true },
+        { id: 'qualification', name: 'Qualification', subfields: [], expanded: true },
+      ] },
+      { id: 'health', name: 'Health', icon: 'health', fields: [
+        { id: 'bloodtype', name: 'Blood type', subfields: [], expanded: true },
+        { id: 'allergies', name: 'Allergies', subfields: [], expanded: true },
+      ] },
+    ],
+    selectedCategoryId: 'bio',
+    addingCategory: false,
+    newCategoryName: '',
+    addingFieldForCategoryId: null,
+    newFieldName: '',
+  };
+
+  findCategory(id) { return this.state.categories.find(c => c.id === id); }
+
+  startAddCategory = () => this.setState({ addingCategory: true, newCategoryName: '' });
+  onNewCategoryChange = (e) => this.setState({ newCategoryName: e.target.value });
+  onNewCategoryKeyDown = (e) => { if (e.key === 'Enter') this.confirmAddCategory(); if (e.key === 'Escape') this.setState({ addingCategory: false }); };
+  confirmAddCategory = () => {
+    const name = this.state.newCategoryName.trim();
+    if (!name) { this.setState({ addingCategory: false }); return; }
+    const id = 'cat_' + Date.now();
+    this.setState(s => ({ categories: [...s.categories, { id, name, icon: 'bio', fields: [] }], addingCategory: false, newCategoryName: '', selectedCategoryId: id }));
+  };
+
+  selectCategory = (id) => this.setState({ selectedCategoryId: id, addingFieldForCategoryId: null });
+
+  startAddField = () => this.setState({ addingFieldForCategoryId: this.state.selectedCategoryId, newFieldName: '' });
+  onNewFieldChange = (e) => this.setState({ newFieldName: e.target.value });
+  onNewFieldKeyDown = (e) => { if (e.key === 'Enter') this.confirmAddField(); if (e.key === 'Escape') this.setState({ addingFieldForCategoryId: null }); };
+  confirmAddField = () => {
+    const name = this.state.newFieldName.trim();
+    const catId = this.state.addingFieldForCategoryId;
+    if (!name || !catId) { this.setState({ addingFieldForCategoryId: null }); return; }
+    this.setState(s => ({
+      categories: s.categories.map(c => c.id === catId
+        ? { ...c, fields: [...c.fields, { id: 'f_' + Date.now(), name, subfields: [], expanded: true }] }
+        : c),
+      addingFieldForCategoryId: null, newFieldName: '',
+    }));
+  };
+
+  removeField = (catId, fieldId) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId ? { ...c, fields: c.fields.filter(f => f.id !== fieldId) } : c) }));
+  };
+
+  toggleField = (catId, fieldId) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId
+      ? { ...c, fields: c.fields.map(f => f.id === fieldId ? { ...f, expanded: !f.expanded } : f) }
+      : c) }));
+  };
+
+  startAddSubfield = (catId, fieldId) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId
+      ? { ...c, fields: c.fields.map(f => f.id === fieldId ? { ...f, expanded: true, addingSubfield: true, newSubfieldName: '' } : f) }
+      : c) }));
+  };
+  onNewSubfieldChange = (catId, fieldId, val) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId
+      ? { ...c, fields: c.fields.map(f => f.id === fieldId ? { ...f, newSubfieldName: val } : f) }
+      : c) }));
+  };
+  confirmAddSubfield = (catId, fieldId) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId
+      ? { ...c, fields: c.fields.map(f => {
+          if (f.id !== fieldId) return f;
+          const name = (f.newSubfieldName || '').trim();
+          if (!name) return { ...f, addingSubfield: false };
+          return { ...f, subfields: [...f.subfields, { id: 'sf_' + Date.now(), name }], addingSubfield: false, newSubfieldName: '', expanded: true };
+        }) }
+      : c) }));
+  };
+  removeSubfield = (catId, fieldId, subId) => {
+    this.setState(s => ({ categories: s.categories.map(c => c.id === catId
+      ? { ...c, fields: c.fields.map(f => f.id === fieldId ? { ...f, subfields: f.subfields.filter(sf => sf.id !== subId) } : f) }
+      : c) }));
+  };
+
+  renderVals() {
+    const s = this.state;
+    const selected = this.findCategory(s.selectedCategoryId) || s.categories[0];
+
+    const categories = s.categories.map(c => ({
+      id: c.id,
+      name: c.name,
+      iconHtml: { __html: ICONS[c.icon] || ICONS.bio },
+      activeClass: c.id === s.selectedCategoryId ? 'active' : '',
+      fieldCountLabel: c.fields.length + (c.fields.length === 1 ? ' field' : ' fields'),
+      select: () => this.selectCategory(c.id),
+    }));
+
+    const fields = (selected ? selected.fields : []).map(f => {
+      const isGroup = f.subfields.length > 0;
+      const showAsSubfields = isGroup || !!f.addingSubfield;
+      return {
+        id: f.id,
+        name: f.name,
+        hasSubfields: isGroup,
+        typeLabel: isGroup ? (f.subfields.length + (f.subfields.length === 1 ? ' subfield' : ' subfields')) : '',
+        badgeClass: isGroup ? 'hasval' : '',
+        showAsSubfields,
+        showAsLeaf: !showAsSubfields,
+        subfieldCountLabel: f.subfields.length + (f.subfields.length === 1 ? ' subfield' : ' subfields'),
+        expanded: f.expanded !== false,
+        caretRotate: f.expanded !== false ? 'rotate(90deg)' : 'rotate(0deg)',
+        toggle: () => this.toggleField(selected.id, f.id),
+        remove: (e) => { e.stopPropagation(); this.removeField(selected.id, f.id); },
+        startAddSubfield: (e) => { e.stopPropagation(); this.startAddSubfield(selected.id, f.id); },
+        addingSubfield: !!f.addingSubfield,
+        newSubfieldName: f.newSubfieldName || '',
+        onNewSubfieldChange: (e) => this.onNewSubfieldChange(selected.id, f.id, e.target.value),
+        onNewSubfieldKeyDown: (e) => { if (e.key === 'Enter') this.confirmAddSubfield(selected.id, f.id); if (e.key === 'Escape') this.setState(st => ({ categories: st.categories.map(c => c.id === selected.id ? { ...c, fields: c.fields.map(ff => ff.id === f.id ? { ...ff, addingSubfield: false } : ff) } : c) })); },
+        confirmAddSubfield: () => this.confirmAddSubfield(selected.id, f.id),
+        subfields: f.subfields.map(sf => ({
+          id: sf.id, name: sf.name,
+          remove: () => this.removeSubfield(selected.id, f.id, sf.id),
+        })),
+      };
+    });
+
+    return {
+      categories,
+      selectedCategory: {
+        name: selected ? selected.name : '',
+        iconHtml: { __html: ICONS[selected ? selected.icon : 'bio'] || ICONS.bio },
+        fieldCountLabel: selected ? (selected.fields.length + (selected.fields.length === 1 ? ' field' : ' fields')) : '',
+      },
+      fields,
+      addingCategory: s.addingCategory,
+      newCategoryName: s.newCategoryName,
+      onNewCategoryChange: this.onNewCategoryChange,
+      onNewCategoryKeyDown: this.onNewCategoryKeyDown,
+      confirmAddCategory: this.confirmAddCategory,
+      startAddCategory: this.startAddCategory,
+      addingFieldForCategory: s.addingFieldForCategoryId === (selected ? selected.id : null),
+      newFieldName: s.newFieldName,
+      onNewFieldChange: this.onNewFieldChange,
+      onNewFieldKeyDown: this.onNewFieldKeyDown,
+      confirmAddField: this.confirmAddField,
+      startAddField: this.startAddField,
+    };
+  }
+}
+
+</script>
+</body>
+</html>

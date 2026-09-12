@@ -1,0 +1,272 @@
+<div class="vid-screen-head">
+  <div>
+    <h3>Sharing</h3>
+    <p class="text-muted">Generate a share code for an organisation, then approve its request before any data is released.</p>
+  </div>
+  <button class="btn btn-primary" (click)="openShare()">
+    <i class="ph ph-share-network"></i>Share
+  </button>
+</div>
+
+@if (message()) { <p class="vid-notice"><i class="ph ph-info"></i>{{ message() }}</p> }
+
+<!-- Pending requests: an organisation redeemed a code and is waiting on a decision. -->
+@if (pending().length) {
+  <h4>Pending requests</h4>
+  <div class="vid-request-list">
+    @for (r of pending(); track r.shareCodeId) {
+      <div class="card elev-sm vid-request">
+        <div class="vid-request-head">
+          <div>
+            <span class="card-title">{{ r.organisationName }}</span>
+            <p class="text-muted">Requested {{ r.requestedAt | date: 'medium' }} · access until {{ r.accessExpiresAt | date: 'medium' }}</p>
+          </div>
+          <span class="tag tag-outline">{{ r.fields.length }} field{{ r.fields.length === 1 ? '' : 's' }}</span>
+        </div>
+
+        <div class="vid-request-fields">
+          @for (f of r.fields; track f.fieldDefinitionId) {
+            <span class="tag" [style]="'background:' + cat(f.categoryName).bg + '; color:' + cat(f.categoryName).text + ';'">
+              {{ fieldLabel(f.fieldName) }}
+            </span>
+          }
+        </div>
+
+        <details class="vid-dpa">
+          <summary><i class="ph ph-file-text"></i>Data-processing agreement</summary>
+          <div class="vid-dpa-body">
+            <p><strong>Purpose:</strong> {{ r.agreement.purpose }}</p>
+            <p><strong>Retention:</strong> {{ r.agreement.retentionDays }} days (POPIA s14)</p>
+            <p><strong>Legal basis:</strong> {{ r.agreement.legalBasis }}</p>
+            <p><strong>Third-party sharing:</strong> {{ r.agreement.thirdPartySharing || 'None' }}</p>
+            <p><strong>On deletion:</strong> {{ r.agreement.deletionCommitment || '—' }}</p>
+          </div>
+        </details>
+
+        <div class="vid-request-actions">
+          <button class="btn btn-danger" (click)="reject(r)">Reject</button>
+          <button class="btn btn-primary" (click)="approve(r)"><i class="ph ph-check-circle"></i>Review &amp; Approve</button>
+        </div>
+      </div>
+    }
+  </div>
+}
+
+<!-- Codes the user has minted, and where each one stands. -->
+<h4>Share codes</h4>
+@if (codes().length) {
+  <table class="table">
+    <thead><tr><th>Organisation</th><th>Fields</th><th>Status</th><th>Code expires</th><th></th></tr></thead>
+    <tbody>
+      @for (c of codes(); track c.shareCodeId) {
+        <tr>
+          <td>{{ c.organisationName }}</td>
+          <td>{{ c.fields.length }}</td>
+          <td>
+            <span class="vid-grant-status" [style.color]="codeStatus(c.status).text">
+              <span class="vid-cat-dot" [style.background]="codeStatus(c.status).dot"></span>{{ codeStatus(c.status).label }}
+            </span>
+          </td>
+          <td>{{ c.codeExpiresAt | date: 'medium' }}</td>
+          <td>
+            @if (c.status === 'Pending' || c.status === 'AwaitingApproval') {
+              <button class="btn btn-danger" (click)="revokeCode(c)">Revoke</button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+} @else {
+  <div class="vid-empty">
+    <i class="ph ph-key"></i>
+    <h4>No share codes yet</h4>
+    <p>Use <strong>Share</strong> above to pick what to share and generate a code.</p>
+  </div>
+}
+
+<h4>Active &amp; past shares</h4>
+@if (grants().length) {
+  <table class="table">
+    <thead><tr><th>Organisation</th><th>Category</th><th>Access until</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      @for (g of grants(); track g.grantId) {
+        <tr>
+          <td>
+            {{ g.organisationName }}
+            @if (orgStatus(g.organisationId); as s) {
+              <span class="tag tag-outline">{{ s }}</span>
+            }
+          </td>
+          <td>
+            <span class="tag" [style]="'background:' + cat(categoryName(g.categoryId)).bg + '; color:' + cat(categoryName(g.categoryId)).text + ';'">
+              {{ cat(categoryName(g.categoryId)).label }}
+            </span>
+            @if (g.fieldDefinitionIds; as ids) {
+              <span class="text-muted"> · {{ ids.length }} field{{ ids.length === 1 ? '' : 's' }}</span>
+            }
+          </td>
+          <td>{{ g.expiresAt ? (g.expiresAt | date: 'medium') : 'No end date' }}</td>
+          <td>
+            <span class="vid-grant-status" [style.color]="status(g).text">
+              <span class="vid-cat-dot" [style.background]="status(g).dot"></span>{{ status(g).label }}
+            </span>
+          </td>
+          <td>
+            @if (g.status === 'Active' || g.status === 'PendingRenewal') {
+              <button class="btn btn-secondary" (click)="startEditExpiry(g)">Edit expiry</button>
+              <button class="btn btn-danger" (click)="revoke(g)">Revoke</button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+} @else {
+  <div class="vid-empty">
+    <i class="ph ph-share-network"></i>
+    <h4>No shares yet</h4>
+    <p>Once an organisation redeems a code and you approve it, the share will show up here.</p>
+  </div>
+}
+
+<!-- Change an existing share's end date. Any future instant is allowed. -->
+@if (editingGrant(); as g) {
+  <div class="dialog-backdrop" (click)="cancelEditExpiry()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-title">Edit expiry — {{ g.organisationName }}</div>
+      <div class="dialog-body">
+        <div class="field">
+          <label for="grant-expiry">Access ends</label>
+          <input id="grant-expiry" class="input" type="datetime-local" [(ngModel)]="expiryInput" [min]="nowLocal" />
+        </div>
+        @if (error()) { <p class="vid-notice"><i class="ph ph-warning-circle"></i>{{ error() }}</p> }
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-secondary" (click)="cancelEditExpiry()">Cancel</button>
+        <button class="btn btn-primary" [disabled]="!expiryInput || busy()" (click)="saveExpiry(g)">Save</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Generate a share code: who, which fields, and for how long. -->
+@if (shareOpen()) {
+  <div class="dialog-backdrop" (click)="closeShare()">
+    <div class="dialog dialog--wide" (click)="$event.stopPropagation()">
+      @if (generated(); as g) {
+        <div class="dialog-title">Share code ready</div>
+        <div class="dialog-body">
+          <p class="text-muted">Give this code to {{ g.organisationName }}. Once they redeem it you'll get a request here to approve before anything is released.</p>
+          <div class="vid-code" data-testid="generated-code">{{ g.code }}</div>
+          <p class="vid-notice"><i class="ph ph-clock-countdown"></i>Code expires {{ g.codeExpiresAt | date: 'medium' }} · access would run until {{ g.accessExpiresAt | date: 'medium' }}</p>
+          <p class="text-muted">This is the only time the code is shown. Copy it now.</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" (click)="copyCode(g.code)"><i class="ph ph-copy"></i>{{ copied() ? 'Copied' : 'Copy' }}</button>
+          <button class="btn btn-primary" (click)="closeShare()">Done</button>
+        </div>
+      } @else {
+        <div class="dialog-title">Share information</div>
+        <div class="dialog-body">
+          <div class="field">
+            <label id="org-label">Organisation to share with</label>
+            <p class="text-muted">Pick the registered organisation that may read the information you select below. One organisation per share code.</p>
+            <div class="vid-org-select">
+              <button
+                type="button"
+                class="vid-org-trigger"
+                aria-haspopup="listbox"
+                aria-labelledby="org-label"
+                [attr.aria-expanded]="orgOpen()"
+                (click)="toggleOrgDropdown()"
+              >
+                <span [class.text-muted]="!orgId">{{ orgName || 'Select an organisation…' }}</span>
+                <i class="ph" [class.ph-caret-down]="!orgOpen()" [class.ph-caret-up]="orgOpen()"></i>
+              </button>
+
+              @if (orgOpen()) {
+                <div class="vid-org-panel" role="listbox">
+                  <div class="vid-org-search">
+                    <i class="ph ph-magnifying-glass"></i>
+                    <input
+                      id="org-search"
+                      class="input"
+                      autocomplete="off"
+                      [(ngModel)]="orgQuery"
+                      (ngModelChange)="searchOrgs()"
+                      placeholder="Search registered organisations…"
+                    />
+                  </div>
+                  <div class="vid-org-picker">
+                    @for (o of organisations(); track o.id) {
+                      <button
+                        type="button"
+                        role="option"
+                        class="vid-org-option"
+                        [class.vid-org-option--active]="orgId === o.id"
+                        [attr.aria-selected]="orgId === o.id"
+                        (click)="selectOrg(o)"
+                      >
+                        <span>{{ o.name }}</span>
+                        @if (orgId === o.id) { <i class="ph ph-check"></i> }
+                      </button>
+                    } @empty {
+                      <p class="text-muted">No registered organisations match "{{ orgQuery }}".</p>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Information to share <span class="text-muted">({{ selectedCount() }} selected)</span></label>
+            <div class="vid-field-tree">
+              @for (c of picker(); track c.id) {
+                <div class="vid-field-group">
+                  <div class="vid-field-group-head">
+                    <button type="button" class="vid-field-toggle" (click)="toggleExpanded(c.id)">
+                      <i class="ph" [class.ph-caret-right]="!isExpanded(c.id)" [class.ph-caret-down]="isExpanded(c.id)"></i>
+                      {{ cat(c.name).label }}
+                    </button>
+                    <label class="vid-field-all">
+                      <input type="checkbox" [checked]="allSelected(c)" (change)="toggleCategory(c)" />
+                      Select all
+                    </label>
+                  </div>
+                  @if (isExpanded(c.id)) {
+                    <div class="vid-field-items">
+                      @for (f of c.fields; track f.id) {
+                        <label class="vid-field-item">
+                          <input type="checkbox" [checked]="isSelected(f.id)" (change)="toggleField(f.id)" />
+                          {{ f.label }}
+                        </label>
+                      } @empty {
+                        <p class="text-muted">This category has no fields yet.</p>
+                      }
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="access-expiry">Access ends</label>
+            <input id="access-expiry" class="input" type="datetime-local" [(ngModel)]="accessExpiry" [min]="nowLocal" />
+            <p class="text-muted">You can change this at any time after the share goes live.</p>
+          </div>
+
+          @if (error()) { <p class="vid-notice"><i class="ph ph-warning-circle"></i>{{ error() }}</p> }
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-secondary" (click)="closeShare()">Cancel</button>
+          <button class="btn btn-primary" [disabled]="!canGenerate() || busy()" (click)="generate()">
+            <i class="ph ph-key"></i>Generate share code
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}

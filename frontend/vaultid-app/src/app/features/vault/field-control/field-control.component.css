@@ -1,0 +1,4 @@
+/* Component-scoped styles for FieldControlComponent.
+   The field-row design-system classes (.vid-fieldbox, .vid-fieldhead,
+   .vid-subfieldrow, .vid-caret, .vid-typebadge) live in the global
+   src/styles.css. */

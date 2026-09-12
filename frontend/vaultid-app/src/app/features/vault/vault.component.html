@@ -1,0 +1,150 @@
+<div class="vid-screen-head">
+  <div>
+    <h3>My Vault</h3>
+    @if (summary(); as s) {
+      <p class="text-muted">{{ s.displayName || s.userId }} &middot; {{ s.activeShareCount }} active share(s)</p>
+    } @else {
+      <p class="text-muted">Loading vault…</p>
+    }
+  </div>
+</div>
+
+<div class="vid-vault-search">
+  <i class="ph ph-magnifying-glass"></i>
+  <input
+    class="input"
+    type="text"
+    autocomplete="off"
+    aria-label="Search fields and sub-fields"
+    placeholder="Search fields and sub-fields…"
+    [ngModel]="query()"
+    (ngModelChange)="query.set($event)"
+    (keyup.escape)="clearSearch()"
+  />
+  @if (searching()) {
+    <button class="vid-iconbtn vid-vault-search__clear" aria-label="Clear search" (click)="clearSearch()">
+      <i class="ph ph-x"></i>
+    </button>
+  }
+</div>
+
+<div class="vid-category-rail">
+  @for (cat of categories(); track cat.id) {
+    <button class="vid-category-btn" [class.vid-category-btn--active]="cat.id === selected()"
+            (click)="selectCategory(cat.id)">
+      <i class="ph" [class]="meta(cat).icon"></i>{{ meta(cat).label }}
+    </button>
+  }
+  <button class="vid-iconbtn" aria-label="Add category" (click)="startAddCategory()">
+    <i class="ph ph-plus"></i>
+  </button>
+</div>
+
+@if (addingCategory()) {
+  <div class="vid-inline-add vid-inline-add--category">
+    <input class="input" type="text" placeholder="Category name"
+           [(ngModel)]="newCategoryName"
+           (keyup.enter)="confirmAddCategory()"
+           (keyup.escape)="cancelAddCategory()" />
+    <button class="btn btn-primary" [disabled]="!newCategoryName.trim()" (click)="confirmAddCategory()">Add</button>
+    <button class="btn btn-ghost" (click)="cancelAddCategory()">Cancel</button>
+  </div>
+}
+
+@if (searching()) {
+  <div class="card elev-sm vid-field-card">
+    <div class="vid-field-card__header">
+      <span class="vid-field-card__title">
+        <i class="ph ph-magnifying-glass"></i>Search results
+      </span>
+      <span class="vid-field-card__actions">
+        <span class="vid-badge">{{ resultCountLabel() }}</span>
+        <button class="vid-iconbtn" aria-label="Clear search" (click)="clearSearch()">
+          <i class="ph ph-x"></i>
+        </button>
+      </span>
+    </div>
+
+    <div class="vid-search-results">
+      @for (hit of searchResults(); track hit.fieldId) {
+        <button type="button" class="vid-search-hit" (click)="goToHit(hit)">
+          <i class="ph vid-search-hit__icon" [class]="hit.categoryIcon"></i>
+          <span class="vid-search-hit__body">
+            <span class="vid-search-hit__name">{{ hit.fieldName }}</span>
+            <span class="vid-search-hit__path">
+              {{ hit.categoryLabel }}@if (hit.parentName) { <span>&nbsp;&rsaquo; {{ hit.parentName }}</span> }
+            </span>
+          </span>
+          @if (hit.parentName) {
+            <span class="vid-typebadge">Sub-field</span>
+          }
+          <i class="ph ph-arrow-right"></i>
+        </button>
+      } @empty {
+        <div class="vid-empty" style="border:none; padding:var(--space-6);">
+          <i class="ph ph-magnifying-glass"></i>
+          <h4>No matches for &ldquo;{{ query().trim() }}&rdquo;</h4>
+          <p>Search looks at field and sub-field names across every category. Try a shorter or different word.</p>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (visibleCategory(); as cat) {
+  <div class="card elev-sm vid-field-card">
+    <div class="vid-field-card__header">
+      <span class="vid-field-card__title">
+        <i class="ph" [class]="meta(cat).icon"></i>{{ meta(cat).label }} data
+      </span>
+      <span class="vid-field-card__actions">
+        <span class="vid-badge">{{ fieldCountLabel(cat) }}</span>
+        <button class="vid-iconbtn" aria-label="Add field" (click)="startAddField()">
+          <i class="ph ph-plus"></i>
+        </button>
+        @if (!cat.isSystem) {
+          <button class="vid-iconbtn" aria-label="Delete category" (click)="deleteCategory(cat)">
+            <i class="ph ph-trash"></i>
+          </button>
+        }
+      </span>
+    </div>
+
+    <div class="vid-field-list">
+      @if (addingField()) {
+        <div class="vid-inline-add">
+          <input class="input" type="text" placeholder="Field name"
+                 [(ngModel)]="newFieldName"
+                 (keyup.enter)="confirmAddField(cat)"
+                 (keyup.escape)="cancelAddField()" />
+          <button class="btn btn-primary" [disabled]="!newFieldName.trim()" (click)="confirmAddField(cat)">Add</button>
+          <button class="btn btn-ghost" (click)="cancelAddField()">Cancel</button>
+        </div>
+      }
+
+      @for (field of cat.fields; track field.id) {
+        <app-field-control
+          [field]="field"
+          [values]="values()"
+          [edits]="edits()"
+          [highlightId]="highlighted()"
+          (edited)="onEdit($event)"
+          (saved)="onSave(cat, $event)"
+          (removed)="removeField(cat, $event)"
+          (addSubField)="addSubField(cat, $event)"
+        />
+      }
+
+      @if (!cat.fields.length && !addingField()) {
+        <div class="vid-empty" style="border:none; padding:var(--space-6);">
+          <i class="ph ph-vault"></i>
+          <h4>No {{ meta(cat).label }} fields yet</h4>
+          <p>Use the &plus; above to add your first field. Nothing is shared until you explicitly grant access.</p>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+@if (error()) { <p class="vid-notice vid-notice--error"><i class="ph ph-warning-circle"></i>{{ error() }}</p> }
+@if (message()) { <p class="vid-notice"><i class="ph ph-info"></i>{{ message() }}</p> }

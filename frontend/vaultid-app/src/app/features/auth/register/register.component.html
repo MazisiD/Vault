@@ -1,0 +1,32 @@
+<div class="vid-auth-shell">
+  <div class="card elev-sm vid-auth-card">
+    <h3>Create your VaultID account</h3>
+
+    @if (error()) {
+      <div class="vid-notice vid-notice--error">{{ error() }}</div>
+    }
+    @if (message()) {
+      <div class="vid-notice">{{ message() }}</div>
+    }
+
+    <form (ngSubmit)="submit()">
+      <div class="field">
+        <label for="username">Username</label>
+        <input class="input" id="username" name="username" [(ngModel)]="username" required minlength="3" autocomplete="username" />
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input class="input" id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input class="input" id="password" name="password" type="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" />
+      </div>
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Creating account…' : 'Register' }}
+      </button>
+    </form>
+
+    <p class="text-muted">Already have an account? <a routerLink="/login">Log in</a></p>
+  </div>
+</div>

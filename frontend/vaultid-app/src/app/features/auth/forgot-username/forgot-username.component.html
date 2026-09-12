@@ -1,0 +1,25 @@
+<div class="vid-auth-shell">
+  <div class="card elev-sm vid-auth-card">
+    <h3>Forgot your username?</h3>
+    <p class="text-muted">Enter the email on your account and we'll email you your username.</p>
+
+    @if (error()) {
+      <div class="vid-notice vid-notice--error">{{ error() }}</div>
+    }
+    @if (sent()) {
+      <div class="vid-notice">If that email is registered, your username is on its way.</div>
+    } @else {
+      <form (ngSubmit)="submit()">
+        <div class="field">
+          <label for="email">Email</label>
+          <input class="input" id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" />
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+          {{ submitting() ? 'Sending…' : 'Send username' }}
+        </button>
+      </form>
+    }
+
+    <p class="text-muted"><a routerLink="/login">Back to log in</a></p>
+  </div>
+</div>

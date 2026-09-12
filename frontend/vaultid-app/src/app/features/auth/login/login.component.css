@@ -1,0 +1,3 @@
+/* Component-scoped styles for LoginComponent.
+   The shared auth layout (.vid-auth-shell, .vid-auth-card, .vid-auth-links)
+   lives in the global src/styles.css. */

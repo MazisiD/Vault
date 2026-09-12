@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vaultid-frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start", "--prefix", "frontend/vaultid-app"],
+      "port": 4200
+    }
+  ]
+}

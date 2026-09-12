@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    VaultID.Tests - Automated tests for Domain, Application and Api.
+    ================================================================
+    Unit tests for Domain guardrails/validation, Application event-sourcing
+    and sharing, and Api integration tests for the dynamic-categories
+    endpoints (WebApplicationFactory against VaultID.Api).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VaultID.Domain\VaultID.Domain.csproj" />
+    <ProjectReference Include="..\VaultID.Application\VaultID.Application.csproj" />
+    <ProjectReference Include="..\VaultID.Api\VaultID.Api.csproj" />
+  </ItemGroup>
+
+</Project>

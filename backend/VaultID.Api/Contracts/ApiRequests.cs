@@ -1,0 +1,70 @@
+using VaultID.Domain;
+
+namespace VaultID.Api.Contracts;
+
+// Transport DTOs for request bodies. Kept separate from Application contracts so
+// the wire format can evolve independently of the use-case signatures.
+
+public sealed record CreateVaultBody(string UserId, string DisplayName);
+
+public sealed record UpdateFieldBody(string Value);
+
+public sealed record ShareBody(
+    string OrganisationId,
+    Guid CategoryId,
+    AccessScope Scope,
+    ShareDuration Duration,
+    ConsentMethod ConsentMethod);
+
+public sealed record RenewBody(ShareDuration NewDuration);
+
+/// <summary>Moves an existing share's end date to an exact instant.</summary>
+public sealed record ChangeExpiryBody(DateTimeOffset NewExpiresAt);
+
+// --- Share codes ---
+
+/// <summary>
+/// Mint a code for one organisation over a chosen set of fields, valid until
+/// <paramref name="AccessExpiresAt"/> once the organisation's request is approved.
+/// </summary>
+public sealed record GenerateShareCodeBody(
+    string OrganisationId,
+    IReadOnlyList<Guid> FieldDefinitionIds,
+    DateTimeOffset AccessExpiresAt,
+    AccessScope? Scope,
+    ConsentMethod? ConsentMethod);
+
+/// <summary>The user's decision on a redeemed code.</summary>
+public sealed record ApproveShareCodeBody(ConsentMethod? ConsentMethod);
+
+/// <summary>An organisation presenting a share code for redemption.</summary>
+public sealed record RedeemShareCodeBody(string Code);
+
+public sealed record RegisterOrganisationBody(
+    string Name,
+    string Purpose,
+    int RetentionDays,
+    string LegalBasis,
+    string? ThirdPartySharing,
+    string? DeletionCommitment);
+
+public sealed record VerifyBody(string Value);
+
+public sealed record SubscribeWebhookBody(string UserId, string CallbackUrl);
+
+public sealed record ForgotUsernameBody(string Email);
+
+// --- Category/field schema (dynamic-categories spec) ---
+
+public sealed record CreateCategoryBody(string Name);
+
+public sealed record RenameCategoryBody(string Name);
+
+public sealed record CreateFieldBody(
+    string Name,
+    FieldType? FieldType,
+    string? AutocompleteToken,
+    IReadOnlyList<string>? Choices,
+    Guid? ParentFieldDefinitionId);
+
+public sealed record RenameFieldBody(string Name);

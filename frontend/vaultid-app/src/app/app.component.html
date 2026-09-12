@@ -1,0 +1,23 @@
+<header class="topbar">
+  <div class="brand"><i class="ph ph-shield-check"></i>VaultID</div>
+  @if (auth.user()) {
+    <div class="session">
+      <span class="text-muted">{{ auth.username }}</span>
+      <button class="btn btn-secondary" (click)="logout()"><i class="ph ph-sign-out"></i>Log out</button>
+    </div>
+  }
+</header>
+
+<div class="app-shell">
+  @if (auth.user()) {
+    <nav class="sidebar">
+      <a routerLink="/vault" routerLinkActive="active"><i class="ph ph-vault"></i>My Vault</a>
+      <a routerLink="/share" routerLinkActive="active"><i class="ph ph-share-network"></i>Sharing</a>
+      <a routerLink="/activity" routerLinkActive="active"><i class="ph ph-clock-counter-clockwise"></i>Activity</a>
+    </nav>
+  }
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

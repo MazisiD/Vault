@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="../services-layer/VaultID.Services/VaultID.Services.csproj" />
+  <Project Path="VaultID.Api/VaultID.Api.csproj" />
+  <Project Path="VaultID.Application/VaultID.Application.csproj" />
+  <Project Path="VaultID.Domain/VaultID.Domain.csproj" />
+  <Project Path="VaultID.Tests/VaultID.Tests.csproj" />
+</Solution>

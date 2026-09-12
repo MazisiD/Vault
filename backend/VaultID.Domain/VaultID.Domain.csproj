@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    VaultID.Domain - DOMAIN MODEL (part of Layer 3, Backend)
+    ========================================================
+    Pure domain: entities, value objects, enums and the domain event types
+    that drive the event-sourcing model. No infrastructure, no web, no data
+    access. It depends on NOTHING (not even the service layer).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+</Project>

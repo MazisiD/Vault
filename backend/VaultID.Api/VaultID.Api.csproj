@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!--
+    VaultID.Api - PRESENTATION/TRANSPORT for the backend (Layer 3, Backend)
+    =======================================================================
+    Thin ASP.NET Core Web API. Controllers ONLY translate HTTP <-> Application
+    use-case services. There is NO business logic here - no permission checks,
+    no event creation, no projections. All of that lives in VaultID.Application.
+
+    References Application (which transitively brings Domain + Services).
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\VaultID.Application\VaultID.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.11" />
+    <!-- UI only: renders the /openapi/v1.json document produced by AddOpenApi(). -->
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="9.0.6" />
+    <!-- Validates the Supabase-issued JWT sent by the Angular client. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+  </ItemGroup>
+
+</Project>

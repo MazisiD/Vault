@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    VaultID.Services - DATA ACCESS LAYER (Layer 2)
+    ================================================
+    This is a STANDALONE class library. It has NO reference to any backend
+    project (Domain / Application / Api). It only knows how to persist and
+    retrieve opaque records. All business logic lives in the backend.
+
+    It is packaged so it can later be published as a NuGet package and
+    consumed by any backend. The in-memory implementations simulate
+    persistence for now; each is annotated with a TODO marking exactly where
+    Supabase PostgreSQL integration will replace the in-memory store.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- Don't require XML docs on every member; the types are self-describing. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
+  </PropertyGroup>
+
+  <!-- NuGet package metadata: this library is publish-ready. -->
+  <PropertyGroup>
+    <IsPackable>true</IsPackable>
+    <PackageId>VaultID.Services</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>VaultID</Authors>
+    <Company>VaultID</Company>
+    <Description>VaultID data-access layer: persistence abstractions (event store, organisation registry, webhook subscriptions) with pluggable backing stores. Independent of any backend.</Description>
+    <PackageTags>vaultid;event-sourcing;persistence;data-access</PackageTags>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Only infrastructure-level dependencies belong here (DI/options/logging
+      abstractions, HTTP client factory, and MailKit for SMTP delivery). No
+      domain or web-framework packages - this layer must stay framework-light
+      so it can be consumed from anywhere.
+    -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+    <PackageReference Include="MailKit" Version="4.17.0" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
+
+</Project>

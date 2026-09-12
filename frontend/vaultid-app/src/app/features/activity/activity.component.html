@@ -1,0 +1,36 @@
+<div class="vid-screen-head">
+  <div>
+    <h3>Activity</h3>
+    <p class="text-muted">Every access to your vault, newest first. This record can't be edited or deleted.</p>
+  </div>
+  <button class="btn btn-secondary" (click)="reload()"><i class="ph ph-arrow-clockwise"></i>Refresh</button>
+</div>
+
+@if (entries().length) {
+  <div>
+    @for (e of entries(); track e.eventId) {
+      <div class="vid-event">
+        <div class="vid-event-icon" [style.background]="tint(e.eventType)" [style.color]="meta(e.eventType).toneColor">
+          <i class="ph" [class]="meta(e.eventType).icon"></i>
+        </div>
+        <div class="vid-event-body">
+          <div class="vid-event-head">
+            <span class="vid-event-label" [style.color]="meta(e.eventType).toneColor">{{ e.eventType }}</span>
+            @if (e.categoryId; as catId) {
+              <span class="vid-cat-dot" [style.background]="catMeta(catId).dot"></span>
+              <span class="vid-event-cat">{{ catMeta(catId).label }}</span>
+            }
+          </div>
+          <div class="vid-event-summary">{{ e.summary }}</div>
+        </div>
+        <div class="vid-event-time">{{ e.occurredAt | date: 'medium' }}</div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="vid-empty">
+    <i class="ph ph-clock-counter-clockwise"></i>
+    <h4>No activity yet</h4>
+    <p>Once an organisation views your data, or you grant or revoke a share, it will show up here — permanently.</p>
+  </div>
+}

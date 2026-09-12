@@ -1,0 +1,162 @@
+@if (nested) {
+  <div class="vid-subfieldrow" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted">
+    <label class="vid-sublabel" [for]="controlId">{{ displayName }}</label>
+    <ng-container [ngTemplateOutlet]="control" />
+    @if (field.fieldType !== 'File') {
+      <button class="btn btn-ghost" [disabled]="!hasEdit()" (click)="save()" aria-label="Save sub-field">
+        <i class="ph ph-check"></i>
+      </button>
+    }
+    <button class="vid-iconbtn" aria-label="Remove sub-field" (click)="removed.emit(field.id)">
+      <i class="ph ph-x"></i>
+    </button>
+  </div>
+} @else {
+  <div class="vid-fieldbox" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted">
+    <div class="vid-fieldhead">
+      <label class="vid-fieldhead__label" [for]="controlId">{{ displayName }}</label>
+      @if (isGroup) {
+        <span class="vid-typebadge vid-typebadge--filled">{{ subFieldCountLabel }}</span>
+      }
+      <button class="vid-iconbtn" [attr.aria-expanded]="expanded()"
+              [attr.aria-label]="(expanded() ? 'Collapse ' : 'Expand ') + displayName"
+              (click)="expanded.set(!expanded())">
+        <i class="ph ph-caret-down vid-caret" [class.vid-caret--open]="expanded()"></i>
+      </button>
+      <button class="vid-iconbtn" aria-label="Add sub-field" (click)="startAddSubField()">
+        <i class="ph ph-plus"></i>
+      </button>
+      <button class="vid-iconbtn" aria-label="Remove field" (click)="removed.emit(field.id)">
+        <i class="ph ph-trash"></i>
+      </button>
+    </div>
+
+    @if (expanded()) {
+      @if (isGroup || addingSubField()) {
+        <div class="vid-subfields">
+          @for (child of field.children; track child.id) {
+            <app-field-control
+              [field]="child"
+              [values]="values"
+              [edits]="edits"
+              [idPrefix]="childPrefix"
+              [nested]="true"
+              [highlightId]="highlightId"
+              (edited)="edited.emit($event)"
+              (saved)="saved.emit($event)"
+              (removed)="removed.emit($event)"
+            />
+          }
+          @if (addingSubField()) {
+            <div class="vid-inline-add">
+              <input class="input" type="text" placeholder="Sub-field name"
+                     [(ngModel)]="newSubFieldName"
+                     (keyup.enter)="confirmAddSubField()"
+                     (keyup.escape)="cancelAddSubField()" />
+              <button class="btn btn-primary" [disabled]="!newSubFieldName.trim()" (click)="confirmAddSubField()">Add</button>
+              <button class="btn btn-ghost" (click)="cancelAddSubField()">Cancel</button>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="vid-field-row">
+          <ng-container [ngTemplateOutlet]="control" />
+          @if (field.fieldType !== 'File') {
+            <button class="btn btn-ghost" [disabled]="!hasEdit()" (click)="save()">
+              <i class="ph ph-check"></i>Save
+            </button>
+          }
+        </div>
+      }
+    }
+  </div>
+}
+
+<ng-template #control>
+  @switch (field.fieldType) {
+    @case ('LongText') {
+      <textarea
+        class="input"
+        [id]="controlId"
+        [name]="controlName"
+        [attr.autocomplete]="field.autocompleteToken || null"
+        [ngModel]="displayValue()"
+        (ngModelChange)="onInput($event)"
+        placeholder="—"
+      ></textarea>
+    }
+    @case ('Number') {
+      <input
+        class="input"
+        type="number"
+        [id]="controlId"
+        [name]="controlName"
+        [attr.autocomplete]="field.autocompleteToken || null"
+        [ngModel]="displayValue()"
+        (ngModelChange)="onInput($event)"
+        placeholder="—"
+      />
+    }
+    @case ('Date') {
+      <input
+        class="input"
+        type="date"
+        [id]="controlId"
+        [name]="controlName"
+        [attr.autocomplete]="field.autocompleteToken || null"
+        [ngModel]="displayValue()"
+        (ngModelChange)="onInput($event)"
+      />
+    }
+    @case ('Boolean') {
+      <label class="vid-checkbox">
+        <input
+          type="checkbox"
+          [id]="controlId"
+          [name]="controlName"
+          [attr.autocomplete]="field.autocompleteToken || null"
+          [ngModel]="booleanValue()"
+          (ngModelChange)="onCheckbox($event)"
+        />
+        <span>{{ booleanValue() ? 'Yes' : 'No' }}</span>
+      </label>
+    }
+    @case ('Choice') {
+      <select
+        class="input"
+        [id]="controlId"
+        [name]="controlName"
+        [attr.autocomplete]="field.autocompleteToken || null"
+        [ngModel]="displayValue()"
+        (ngModelChange)="onInput($event)"
+      >
+        <option value="">—</option>
+        @for (choice of field.choices; track choice) {
+          <option [value]="choice">{{ choice }}</option>
+        }
+      </select>
+    }
+    @case ('File') {
+      <input
+        class="input"
+        type="text"
+        [id]="controlId"
+        [name]="controlName"
+        value="File upload isn't supported yet"
+        disabled
+      />
+    }
+    @default {
+      <input
+        class="input"
+        type="text"
+        [id]="controlId"
+        [name]="controlName"
+        [attr.autocomplete]="field.autocompleteToken || null"
+        [ngModel]="displayValue()"
+        (ngModelChange)="onInput($event)"
+        placeholder="—"
+      />
+    }
+  }
+</ng-template>
