@@ -33,11 +33,41 @@ markers; swapping to a real database is a single new DI registration.
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Node.js](https://nodejs.org/) (LTS) + npm
+- [Python 3.9+](https://www.python.org/downloads/) (only for the one-shot setup script)
 
-## Run everything
+## Quick start — one script does everything
 
-Run the backend and frontend in **two separate terminals**. (The service layer is a
-library compiled into the backend — it is not started on its own.)
+From the repository root:
+
+```bash
+python run_vaultid.py
+```
+
+The script runs every step in order: checks prerequisites, restores and builds the
+service layer, restores and builds the backend, installs the frontend npm packages, then
+starts the **API on http://localhost:5080** and the **Angular dev server on
+http://localhost:4200**, streaming both logs (`[api]` / `[web]`) in one terminal. Press
+**Ctrl+C** to stop both.
+
+Options:
+
+| Command | What it does |
+|---|---|
+| `python run_vaultid.py` | Full install + build, then run both servers |
+| `python run_vaultid.py --setup-only` | Install and build only; start nothing |
+| `python run_vaultid.py --run-only` | Skip install/build; just start both servers |
+| `python run_vaultid.py --with-tests` | Also run backend and frontend unit tests |
+| `python run_vaultid.py --build-frontend` | Also produce a production frontend build |
+
+If `npm install` fails against a corporate registry, the script automatically retries
+against the public npm registry.
+
+Once it is up, open **http://localhost:4200** and jump to [Use it](#use-it).
+
+## Run everything manually
+
+Prefer to drive it yourself? Run the backend and frontend in **two separate terminals**.
+(The service layer is a library compiled into the backend — it is not started on its own.)
 
 ### Terminal 1 — Backend API
 
