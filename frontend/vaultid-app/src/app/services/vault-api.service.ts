@@ -37,8 +37,18 @@ export class VaultApiService {
     return this.http.get<CategoryView>(`${this.base}/api/vaults/${userId}/categories/${categoryId}`);
   }
 
-  updateField(userId: string, fieldDefinitionId: string, value: string): Observable<void> {
-    return this.http.put<void>(`${this.base}/api/vaults/${userId}/fields/${fieldDefinitionId}`, { value });
+  /**
+   * Saves every edit made to one category in a single request. The backend
+   * validates the whole set before writing any of it and records one event per
+   * changed field; the response is the category's values as they now stand.
+   */
+  updateCategoryFields(
+    userId: string,
+    categoryId: string,
+    values: { fieldDefinitionId: string; value: string }[],
+  ): Observable<CategoryView> {
+    return this.http.put<CategoryView>(
+      `${this.base}/api/vaults/${userId}/categories/${categoryId}/fields`, { values });
   }
 
   getActivity(userId: string): Observable<ActivityEntry[]> {

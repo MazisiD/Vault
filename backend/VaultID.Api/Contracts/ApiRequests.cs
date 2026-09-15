@@ -9,6 +9,12 @@ public sealed record CreateVaultBody(string UserId, string DisplayName);
 
 public sealed record UpdateFieldBody(string Value);
 
+/// <summary>One field's new value inside a category-level save.</summary>
+public sealed record FieldValueBody(Guid FieldDefinitionId, string Value);
+
+/// <summary>Every edit the user made to one category, saved as one change.</summary>
+public sealed record UpdateCategoryFieldsBody(IReadOnlyList<FieldValueBody> Values);
+
 public sealed record ShareBody(
     string OrganisationId,
     Guid CategoryId,

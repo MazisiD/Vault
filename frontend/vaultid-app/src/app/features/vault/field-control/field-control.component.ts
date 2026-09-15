@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { FieldDefinition } from '../../../models';
@@ -24,12 +24,17 @@ export interface AddSubFieldEvent {
  * or its indented sub-fields (a group).
  *
  * The control itself is chosen by `fieldType` (dynamic-categories spec):
- * Text/LongText/Number/Date/Boolean/Choice get an editable control with an
- * inline Save button; File is a disabled placeholder (upload isn't
- * implemented - the spec explicitly defers file storage); a Group renders no
- * control of its own, only its children, each rendered recursively by this
- * same component with `nested` set (the backend caps nesting at one level, so
- * recursion never goes deeper than one Group).
+ * Text/LongText/Number/Date/Boolean/Choice get an editable control; File is a
+ * disabled placeholder (upload isn't implemented - the spec explicitly defers
+ * file storage); a Group renders no control of its own, only its children,
+ * each rendered recursively by this same component with `nested` set (the
+ * backend caps nesting at one level, so recursion never goes deeper than one
+ * Group).
+ *
+ * This component never saves. Editing a control emits `edited` and the row
+ * marks itself unsaved; the whole category is committed in one request by the
+ * parent's Save button, so a group of related fields lands together rather
+ * than leaking out one at a time.
  *
  * Every control gets a deterministic `id`/`name` derived from the field (its
  * `fieldDefinitionId` for `id`; a readable slug combining the parent group's
@@ -46,7 +51,7 @@ export interface AddSubFieldEvent {
   templateUrl: './field-control.component.html',
   styleUrl: './field-control.component.css',
 })
-export class FieldControlComponent {
+export class FieldControlComponent implements OnDestroy {
   @Input({ required: true }) field!: FieldDefinition;
   @Input({ required: true }) values!: Record<string, string | null>;
   @Input({ required: true }) edits!: Record<string, string>;
@@ -71,13 +76,15 @@ export class FieldControlComponent {
   private highlightTarget: string | null = null;
 
   @Output() edited = new EventEmitter<FieldEditEvent>();
-  @Output() saved = new EventEmitter<string>();
   @Output() removed = new EventEmitter<string>();
   @Output() addSubField = new EventEmitter<AddSubFieldEvent>();
 
   readonly expanded = signal(true);
   readonly addingSubField = signal(false);
   newSubFieldName = '';
+  /** Transient "Copied" acknowledgement on this row's copy button. */
+  readonly copied = signal(false);
+  private copiedTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * A field reads as a group once it has children. The backend promotes a
@@ -126,8 +133,75 @@ export class FieldControlComponent {
     return this.displayValue() === 'true';
   }
 
-  hasEdit(): boolean {
-    return this.edits[this.field.id] !== undefined;
+  /**
+   * True when this row holds an edit that differs from the stored value. The
+   * row marks itself as unsaved; committing it is the category's Save button's
+   * job, not this component's.
+   */
+  isDirty(): boolean {
+    const edit = this.edits[this.field.id];
+    return edit !== undefined && edit !== (this.values[this.field.id] ?? '');
+  }
+
+  /**
+   * The text this row puts on the clipboard. A leaf copies its bare value, so
+   * it can be pasted straight into another form. A group copies itself and all
+   * its sub-fields in one go as `Label: value` lines - copying a parent is the
+   * only way to get its sub-fields, they are never copied individually from
+   * the parent's button.
+   */
+  copyText(): string {
+    if (!this.isGroup) {
+      return this.displayValue();
+    }
+    const lines: string[] = [];
+    const own = this.displayValue();
+    if (own) {
+      lines.push(`${this.displayName}: ${own}`);
+    }
+    for (const child of this.field.children) {
+      const value = this.edits[child.id] ?? this.values[child.id] ?? '';
+      if (value) {
+        lines.push(`${fieldMeta(child.name).displayName}: ${value}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  canCopy(): boolean {
+    return this.copyText().length > 0;
+  }
+
+  get copyLabel(): string {
+    return this.isGroup ? `Copy ${this.displayName} and its sub-fields` : `Copy ${this.displayName}`;
+  }
+
+  copy(): void {
+    const text = this.copyText();
+    if (!text) {
+      return;
+    }
+    navigator.clipboard?.writeText(text).then(
+      () => this.acknowledgeCopy(),
+      () => this.copied.set(false),
+    );
+  }
+
+  private acknowledgeCopy(): void {
+    this.copied.set(true);
+    if (this.copiedTimer !== null) {
+      clearTimeout(this.copiedTimer);
+    }
+    this.copiedTimer = setTimeout(() => {
+      this.copied.set(false);
+      this.copiedTimer = null;
+    }, 1500);
+  }
+
+  ngOnDestroy(): void {
+    if (this.copiedTimer !== null) {
+      clearTimeout(this.copiedTimer);
+    }
   }
 
   onInput(value: string): void {
@@ -136,10 +210,6 @@ export class FieldControlComponent {
 
   onCheckbox(checked: boolean): void {
     this.onInput(checked ? 'true' : 'false');
-  }
-
-  save(): void {
-    this.saved.emit(this.field.id);
   }
 
   startAddSubField(): void {

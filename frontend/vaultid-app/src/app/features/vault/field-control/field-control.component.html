@@ -1,20 +1,24 @@
 @if (nested) {
-  <div class="vid-subfieldrow" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted">
+  <div class="vid-subfieldrow" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted" [class.vid-fieldrow--dirty]="isDirty()">
     <label class="vid-sublabel" [for]="controlId">{{ displayName }}</label>
     <ng-container [ngTemplateOutlet]="control" />
-    @if (field.fieldType !== 'File') {
-      <button class="btn btn-ghost" [disabled]="!hasEdit()" (click)="save()" aria-label="Save sub-field">
-        <i class="ph ph-check"></i>
-      </button>
+    @if (isDirty()) {
+      <span class="vid-dirty-dot" title="Unsaved" aria-label="Unsaved change"></span>
     }
+    <button class="vid-iconbtn" [disabled]="!canCopy()" [attr.aria-label]="copyLabel" (click)="copy()">
+      <i class="ph" [class.ph-copy]="!copied()" [class.ph-check]="copied()"></i>
+    </button>
     <button class="vid-iconbtn" aria-label="Remove sub-field" (click)="removed.emit(field.id)">
       <i class="ph ph-x"></i>
     </button>
   </div>
 } @else {
-  <div class="vid-fieldbox" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted">
+  <div class="vid-fieldbox" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted" [class.vid-fieldrow--dirty]="isDirty()">
     <div class="vid-fieldhead">
       <label class="vid-fieldhead__label" [for]="controlId">{{ displayName }}</label>
+      @if (isDirty()) {
+        <span class="vid-dirty-dot" title="Unsaved" aria-label="Unsaved change"></span>
+      }
       @if (isGroup) {
         <span class="vid-typebadge vid-typebadge--filled">{{ subFieldCountLabel }}</span>
       }
@@ -22,6 +26,9 @@
               [attr.aria-label]="(expanded() ? 'Collapse ' : 'Expand ') + displayName"
               (click)="expanded.set(!expanded())">
         <i class="ph ph-caret-down vid-caret" [class.vid-caret--open]="expanded()"></i>
+      </button>
+      <button class="vid-iconbtn" [disabled]="!canCopy()" [attr.aria-label]="copyLabel" (click)="copy()">
+        <i class="ph" [class.ph-copy]="!copied()" [class.ph-check]="copied()"></i>
       </button>
       <button class="vid-iconbtn" aria-label="Add sub-field" (click)="startAddSubField()">
         <i class="ph ph-plus"></i>
@@ -43,7 +50,6 @@
               [nested]="true"
               [highlightId]="highlightId"
               (edited)="edited.emit($event)"
-              (saved)="saved.emit($event)"
               (removed)="removed.emit($event)"
             />
           }
@@ -61,11 +67,6 @@
       } @else {
         <div class="vid-field-row">
           <ng-container [ngTemplateOutlet]="control" />
-          @if (field.fieldType !== 'File') {
-            <button class="btn btn-ghost" [disabled]="!hasEdit()" (click)="save()">
-              <i class="ph ph-check"></i>Save
-            </button>
-          }
         </div>
       }
     }

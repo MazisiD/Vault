@@ -29,10 +29,18 @@ export interface FieldSearchHit {
  * Per `New design/Manage Categories & Fields.dc.html` there is no separate
  * "manage categories & fields" panel: schema editing is inline, as a `+` on
  * the category rail, a `+` in the card header, and per-row add/delete buttons.
+ *
+ * Field values are edited as a form and committed a category at a time: rows
+ * mark themselves unsaved, and one "Save changes" request sends the whole set
+ * so related fields (a group's parts, say) land together instead of leaking
+ * out one at a time. The backend still records a separate event per changed
+ * field, so the activity feed remains field-level.
+ *
  * This component only renders data and forwards user actions to the API
  * service - every guardrail (system categories, a field that still holds a
- * value, promoting a populated field to a group) is enforced by the backend
- * and its rejection is surfaced here as a message, never re-implemented.
+ * value, promoting a populated field to a group, value validation) is enforced
+ * by the backend and its rejection is surfaced here as a message, never
+ * re-implemented.
  */
 @Component({
   selector: 'app-vault',
@@ -52,8 +60,22 @@ export class VaultComponent {
   readonly selectedCategory = computed(() => this.categories().find((c) => c.id === this.selected()) ?? null);
   readonly values = signal<Record<string, string | null>>({});
   readonly edits = signal<Record<string, string>>({});
+  readonly saving = signal(false);
   readonly message = signal('');
   readonly error = signal('');
+
+  /**
+   * Fields whose pending edit genuinely differs from what is stored. Typing a
+   * change and undoing it leaves an entry in `edits`, so comparing against
+   * `values` is what decides whether there is anything to save.
+   */
+  readonly dirtyFieldIds = computed(() => {
+    const values = this.values();
+    return Object.entries(this.edits())
+      .filter(([fieldId, value]) => (values[fieldId] ?? '') !== value)
+      .map(([fieldId]) => fieldId);
+  });
+  readonly dirtyCount = computed(() => this.dirtyFieldIds().length);
 
   /** Free-text vault search, matching field and sub-field names across every category. */
   readonly query = signal('');
@@ -124,6 +146,7 @@ export class VaultComponent {
     this.selected.set(null);
     this.values.set({});
     this.edits.set({});
+    this.saving.set(false);
     this.message.set('');
     this.error.set('');
     this.clearSearch();
@@ -210,11 +233,38 @@ export class VaultComponent {
   }
 
   selectCategory(categoryId: string): void {
+    if (categoryId === this.selected()) {
+      return;
+    }
+    if (!this.confirmDiscard()) {
+      return;
+    }
+    this.edits.set({});
     this.selected.set(categoryId);
     this.cancelAddField();
     this.refreshSelected();
   }
 
+  /**
+   * Asks before throwing away pending edits. Leaving a category used to wipe
+   * them silently, which is far more costly now a whole category is saved in
+   * one go.
+   */
+  private confirmDiscard(): boolean {
+    const count = this.dirtyCount();
+    if (!count) {
+      return true;
+    }
+    return window.confirm(
+      `You have ${count} unsaved change${count === 1 ? '' : 's'} in this category. Leave without saving?`,
+    );
+  }
+
+  /**
+   * Reloads the selected category's stored values. Deliberately leaves `edits`
+   * alone: schema changes (adding or deleting a field) also land here, and
+   * they must not discard what the user has typed.
+   */
   private refreshSelected(): void {
     const categoryId = this.selected();
     const userId = this.userId;
@@ -222,7 +272,6 @@ export class VaultComponent {
       this.values.set({});
       return;
     }
-    this.edits.set({});
     this.api
       .getCategory(userId, categoryId)
       .pipe(catchError(() => of(null)))
@@ -246,19 +295,52 @@ export class VaultComponent {
     this.edits.update((e) => ({ ...e, [edit.fieldId]: edit.value }));
   }
 
-  onSave(cat: Category, fieldId: string): void {
-    const value = this.edits()[fieldId];
-    if (value === undefined) {
+  /**
+   * Saves the whole category in one request. The backend validates every value
+   * before writing any of them, so a single bad entry rejects the save instead
+   * of leaving the category half-written, and it still records one event per
+   * changed field so the activity feed names exactly what the user altered.
+   */
+  saveCategory(cat: Category): void {
+    const fieldIds = this.dirtyFieldIds();
+    if (!fieldIds.length || this.saving()) {
       return;
     }
-    this.api.updateField(this.userId, fieldId, value).subscribe({
-      next: () => {
+    const edits = this.edits();
+    const values = fieldIds.map((fieldId) => ({ fieldDefinitionId: fieldId, value: edits[fieldId] }));
+
+    this.saving.set(true);
+    this.api.updateCategoryFields(this.userId, cat.id, values).subscribe({
+      next: (view) => {
+        this.saving.set(false);
+        this.edits.set({});
+        this.values.set(view.fields ?? {});
         this.error.set('');
-        this.message.set(`Saved. Any organisation sharing ${cat.name} now sees the change.`);
-        this.refreshSelected();
+        this.message.set(
+          `Saved ${fieldIds.length} change${fieldIds.length === 1 ? '' : 's'} to ${cat.name}. ` +
+            `Any organisation sharing ${cat.name} now sees them.`,
+        );
       },
-      error: (err) => this.fail(err, 'Could not save that field.'),
+      error: (err) => {
+        this.saving.set(false);
+        this.fail(err, 'Could not save those changes. Nothing was written.');
+      },
     });
+  }
+
+  /** Throws away every pending edit in the category, restoring stored values. */
+  discardEdits(): void {
+    if (!this.dirtyCount()) {
+      return;
+    }
+    this.edits.set({});
+    this.message.set('');
+    this.error.set('');
+  }
+
+  unsavedLabel(): string {
+    const count = this.dirtyCount();
+    return `${count} unsaved change${count === 1 ? '' : 's'}`;
   }
 
   // --- Categories ---

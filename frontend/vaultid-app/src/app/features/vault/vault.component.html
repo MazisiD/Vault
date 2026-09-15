@@ -129,7 +129,6 @@
           [edits]="edits()"
           [highlightId]="highlighted()"
           (edited)="onEdit($event)"
-          (saved)="onSave(cat, $event)"
           (removed)="removeField(cat, $event)"
           (addSubField)="addSubField(cat, $event)"
         />
@@ -143,6 +142,22 @@
         </div>
       }
     </div>
+
+    @if (cat.fields.length) {
+      <div class="vid-save-bar" [class.vid-save-bar--dirty]="dirtyCount() > 0">
+        <span class="vid-save-bar__status">
+          @if (dirtyCount()) {
+            <i class="ph ph-pencil-simple"></i>{{ unsavedLabel() }}
+          } @else {
+            <i class="ph ph-check-circle"></i>All changes saved
+          }
+        </span>
+        <button class="btn btn-ghost" [disabled]="!dirtyCount() || saving()" (click)="discardEdits()">Discard</button>
+        <button class="btn btn-primary" [disabled]="!dirtyCount() || saving()" (click)="saveCategory(cat)">
+          <i class="ph ph-check"></i>{{ saving() ? 'Saving…' : 'Save changes' }}
+        </button>
+      </div>
+    }
   </div>
 }
 

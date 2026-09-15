@@ -12,6 +12,20 @@ public sealed record CreateVaultRequest(string UserId, string DisplayName);
 
 public sealed record UpdateFieldRequest(Guid FieldDefinitionId, string Value);
 
+/// <summary>One field's new value within a category-wide save.</summary>
+public sealed record FieldValueUpdate(Guid FieldDefinitionId, string Value);
+
+/// <summary>
+/// Every edit the user made to one category, saved as a single change. The
+/// whole set is validated before anything is written, so a category is never
+/// left half-saved, and one <c>FieldUpdated</c> event is still recorded per
+/// field that actually changed - the audit trail stays field-level even though
+/// the user saves a category at a time.
+/// </summary>
+public sealed record UpdateCategoryFieldsRequest(
+    Guid CategoryId,
+    IReadOnlyList<FieldValueUpdate> Values);
+
 /// <summary>Current values of one category, keyed by field definition id.</summary>
 public sealed record CategoryView(
     Guid CategoryId,
@@ -121,9 +135,16 @@ public sealed record ShareCodeRedemptionView(
     int FieldCount,
     DateTimeOffset AccessExpiresAt);
 
+/// <summary>
+/// One line of the activity feed. <paramref name="EventType"/> is the machine
+/// discriminator (used for icon/tone lookup and filtering);
+/// <paramref name="EventLabel"/> is the readable form - "Field updated" rather
+/// than "FieldUpdated" - and is what the UI displays.
+/// </summary>
 public sealed record ActivityEntry(
     Guid EventId,
     string EventType,
+    string EventLabel,
     DateTimeOffset OccurredAt,
     string Summary,
     string? OrganisationId,

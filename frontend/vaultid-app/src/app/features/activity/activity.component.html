@@ -15,7 +15,7 @@
         </div>
         <div class="vid-event-body">
           <div class="vid-event-head">
-            <span class="vid-event-label" [style.color]="meta(e.eventType).toneColor">{{ e.eventType }}</span>
+            <span class="vid-event-label" [style.color]="meta(e.eventType).toneColor">{{ e.eventLabel }}</span>
             @if (e.categoryId; as catId) {
               <span class="vid-cat-dot" [style.background]="catMeta(catId).dot"></span>
               <span class="vid-event-cat">{{ catMeta(catId).label }}</span>

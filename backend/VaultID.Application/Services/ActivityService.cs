@@ -35,7 +35,7 @@ public sealed class ActivityService(VaultStreamRepository repository)
     private static ActivityEntry ToEntry(DomainEvent e, VaultState state)
     {
         var (summary, orgId, categoryId) = Describe(e, state);
-        return new ActivityEntry(e.EventId, e.EventType, e.OccurredAt, summary, orgId, categoryId);
+        return new ActivityEntry(e.EventId, e.EventType, e.EventLabel, e.OccurredAt, summary, orgId, categoryId);
     }
 
     private static (string Summary, string? OrgId, Guid? CategoryId) Describe(DomainEvent e, VaultState state) => e switch
@@ -58,7 +58,7 @@ public sealed class ActivityService(VaultStreamRepository repository)
         AccessDenied ad => ($"Denied access to {ad.OrganisationId}: {ad.Reason}", ad.OrganisationId, ad.CategoryId),
         PropagationSent p => ($"Change to {FieldName(state, p.ChangedFieldDefinitionId)} propagated to {p.NotifiedOrganisationIds.Count} organisation(s).", null, p.CategoryId),
         ConsentRenewed cr => ($"You renewed {CategoryName(state, cr.CategoryId)} sharing with {cr.OrganisationId}.", cr.OrganisationId, cr.CategoryId),
-        _ => (e.EventType, null, null)
+        _ => (e.EventLabel, null, null)
     };
 
     private static string CategoryName(VaultState state, Guid categoryId) =>

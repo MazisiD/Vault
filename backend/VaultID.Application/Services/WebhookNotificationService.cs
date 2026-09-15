@@ -52,13 +52,23 @@ public sealed class WebhookNotificationService(
     }
 
     /// <summary>
-    /// Determines which organisations should be notified of a field change and
-    /// records the propagation. Called by <see cref="VaultService"/> after a
-    /// FieldUpdated event has been appended.
+    /// Determines which organisations should be notified of a category's field
+    /// changes and records the propagation. Called by <see cref="VaultService"/>
+    /// after the FieldUpdated events have been appended.
+    /// <para>
+    /// Recipients are resolved once for the whole save, but one PropagationSent
+    /// event is still recorded per changed field so the audit trail names
+    /// exactly what moved.
+    /// </para>
     /// </summary>
     public async Task PropagateFieldChangeAsync(
-        string userId, Guid categoryId, Guid fieldDefinitionId, CancellationToken ct = default)
+        string userId, Guid categoryId, IReadOnlyList<Guid> fieldDefinitionIds, CancellationToken ct = default)
     {
+        if (fieldDefinitionIds.Count == 0)
+        {
+            return;
+        }
+
         var state = await _repository.LoadStateAsync(userId, ct);
         var now = DateTimeOffset.UtcNow;
 
@@ -73,15 +83,17 @@ public sealed class WebhookNotificationService(
             return;
         }
 
-        var propagation = new PropagationSent
-        {
-            VaultId = userId,
-            CategoryId = categoryId,
-            ChangedFieldDefinitionId = fieldDefinitionId,
-            NotifiedOrganisationIds = recipientOrgIds
-        };
+        var propagations = fieldDefinitionIds
+            .Select(fieldDefinitionId => new PropagationSent
+            {
+                VaultId = userId,
+                CategoryId = categoryId,
+                ChangedFieldDefinitionId = fieldDefinitionId,
+                NotifiedOrganisationIds = recipientOrgIds
+            })
+            .ToList();
 
-        await _repository.AppendAsync(userId, state.Version, [propagation], ct);
+        await _repository.AppendAsync(userId, state.Version, propagations, ct);
 
         // Deliver webhooks to subscribed organisations. The payload contains the
         // event type, user id and field name only (never the value).

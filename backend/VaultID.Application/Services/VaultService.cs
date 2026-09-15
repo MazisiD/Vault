@@ -5,6 +5,7 @@ using VaultID.Application.Contracts;
 using VaultID.Application.EventSourcing;
 using VaultID.Domain.Categories;
 using VaultID.Domain.Events;
+using VaultID.Domain.Models;
 
 namespace VaultID.Application.Services;
 
@@ -120,9 +121,9 @@ public sealed class VaultService(
     }
 
     /// <summary>
-    /// Updates a single field (blueprint 5.3). Validates the value against the
-    /// field definition's type, emits FieldUpdated, then propagates the change
-    /// to orgs that currently share that field's category.
+    /// Updates a single field (blueprint 5.3). A thin wrapper over
+    /// <see cref="UpdateCategoryFieldsAsync"/> so both paths validate, record
+    /// and propagate identically.
     /// </summary>
     public async Task UpdateFieldAsync(string userId, UpdateFieldRequest request, CancellationToken ct = default)
     {
@@ -137,30 +138,111 @@ public sealed class VaultService(
             throw new ValidationException($"Field '{request.FieldDefinitionId}' does not exist.");
         }
 
-        if (!FieldValueValidator.TryValidate(fieldDefinition, request.Value, out var error))
+        await ApplyFieldValuesAsync(
+            userId,
+            state,
+            fieldDefinition.CategoryId,
+            [new FieldValueUpdate(request.FieldDefinitionId, request.Value)],
+            ct);
+    }
+
+    /// <summary>
+    /// Saves every edit the user made to one category in a single change
+    /// (blueprint 5.3). The whole set is validated first, so one bad value
+    /// rejects the save rather than leaving the category half-written, and the
+    /// accepted values are then appended as one atomic batch.
+    /// <para>
+    /// Auditing stays field-level: a separate FieldUpdated event is recorded
+    /// for each field whose value actually changed, and fields the user
+    /// re-submitted unchanged produce no event at all.
+    /// </para>
+    /// </summary>
+    public async Task<CategoryView> UpdateCategoryFieldsAsync(
+        string userId, UpdateCategoryFieldsRequest request, CancellationToken ct = default)
+    {
+        var state = await _repository.LoadStateAsync(userId, ct);
+        if (!state.Exists)
         {
-            throw new ValidationException(error!);
+            throw new NotFoundException($"No vault found for user '{userId}'.");
         }
 
-        string? oldValue = null;
-        if (state.Values.TryGetValue(fieldDefinition.CategoryId, out var bucket))
+        if (!state.Categories.ContainsKey(request.CategoryId))
         {
-            bucket.TryGetValue(request.FieldDefinitionId, out oldValue);
+            throw new NotFoundException($"Category '{request.CategoryId}' not found.");
         }
 
-        var updated = new FieldUpdated
-        {
-            VaultId = userId,
-            FieldDefinitionId = request.FieldDefinitionId,
-            NewValue = request.Value,
-            OldValueHash = oldValue is null ? null : Hash(oldValue)
-        };
+        await ApplyFieldValuesAsync(userId, state, request.CategoryId, request.Values, ct);
+        return await GetCategoryAsync(userId, request.CategoryId, ct);
+    }
 
-        await _repository.AppendAsync(userId, state.Version, [updated], ct);
+    /// <summary>
+    /// Validates every submitted value against its field definition, then
+    /// appends one FieldUpdated event per genuinely changed field in a single
+    /// write and propagates the change to organisations sharing the category.
+    /// Nothing is written unless all of the values are valid.
+    /// </summary>
+    private async Task ApplyFieldValuesAsync(
+        string userId,
+        VaultState state,
+        Guid categoryId,
+        IReadOnlyList<FieldValueUpdate> values,
+        CancellationToken ct)
+    {
+        state.Values.TryGetValue(categoryId, out var currentValues);
+
+        var events = new List<DomainEvent>();
+        var changedFieldIds = new List<Guid>();
+
+        foreach (var update in values)
+        {
+            if (!state.FieldDefinitions.TryGetValue(update.FieldDefinitionId, out var fieldDefinition))
+            {
+                throw new ValidationException($"Field '{update.FieldDefinitionId}' does not exist.");
+            }
+
+            if (fieldDefinition.CategoryId != categoryId)
+            {
+                throw new ValidationException($"Field '{fieldDefinition.Name}' does not belong to this category.");
+            }
+
+            if (!FieldValueValidator.TryValidate(fieldDefinition, update.Value, out var error))
+            {
+                throw new ValidationException(error!);
+            }
+
+            string? oldValue = null;
+            currentValues?.TryGetValue(update.FieldDefinitionId, out oldValue);
+
+            // A field the user opened but left alone is not a change, and must
+            // not litter the audit trail with a no-op edit.
+            if (string.Equals(oldValue, update.Value, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            events.Add(new FieldUpdated
+            {
+                VaultId = userId,
+                FieldDefinitionId = update.FieldDefinitionId,
+                NewValue = update.Value,
+                OldValueHash = oldValue is null ? null : Hash(oldValue)
+            });
+            changedFieldIds.Add(update.FieldDefinitionId);
+        }
+
+        if (events.Count == 0)
+        {
+            return;
+        }
+
+        // One append for the whole category: the batch either lands in full or
+        // not at all, and it consumes a single expected-version slot.
+        await _repository.AppendAsync(userId, state.Version, events, ct);
 
         // "Update once, propagate everywhere": notify organisations that hold an
-        // active share of this category. This appends a PropagationSent event.
-        await _notifications.PropagateFieldChangeAsync(userId, fieldDefinition.CategoryId, request.FieldDefinitionId, ct);
+        // active share of this category. This appends a PropagationSent event
+        // per changed field.
+        await _notifications.PropagateFieldChangeAsync(userId, categoryId, changedFieldIds, ct);
     }
 
     private static string Hash(string value)

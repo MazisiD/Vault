@@ -171,7 +171,10 @@ export interface GenerateShareCodeRequest {
 
 export interface ActivityEntry {
   eventId: string;
+  /** Machine discriminator (e.g. `FieldUpdated`) - used for icon/tone lookup, never displayed. */
   eventType: string;
+  /** Readable form of `eventType` (e.g. `Field updated`) - this is what the UI shows. */
+  eventLabel: string;
   occurredAt: string;
   summary: string;
   organisationId?: string | null;

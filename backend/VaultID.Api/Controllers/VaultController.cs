@@ -47,6 +47,22 @@ public sealed class VaultController(VaultService vaults, ActivityService activit
         return NoContent();
     }
 
+    /// <summary>
+    /// Saves a whole category's edits at once. Either every value is accepted or
+    /// none is, and the response carries the category's values as they now
+    /// stand so the client never has to guess what landed.
+    /// </summary>
+    [HttpPut("{userId}/categories/{categoryId:guid}/fields")]
+    public async Task<ActionResult<CategoryView>> UpdateCategoryFields(
+        string userId, Guid categoryId, UpdateCategoryFieldsBody body, CancellationToken ct)
+    {
+        var values = body.Values
+            .Select(v => new FieldValueUpdate(v.FieldDefinitionId, v.Value))
+            .ToList();
+
+        return Ok(await _vaults.UpdateCategoryFieldsAsync(userId, new UpdateCategoryFieldsRequest(categoryId, values), ct));
+    }
+
     [HttpGet("{userId}/activity")]
     public async Task<ActionResult<IReadOnlyList<ActivityEntry>>> GetActivity(string userId, CancellationToken ct) =>
         Ok(await _activity.GetFeedAsync(userId, ct));

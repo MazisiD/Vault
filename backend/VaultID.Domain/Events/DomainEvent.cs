@@ -32,4 +32,12 @@ public abstract record DomainEvent
     /// </summary>
     [JsonIgnore]
     public string EventType => GetType().Name;
+
+    /// <summary>
+    /// Human-readable name for this event, e.g. "Field updated". This is what
+    /// anything user-facing prints; <see cref="EventType"/> is a machine
+    /// discriminator and must never be shown raw.
+    /// </summary>
+    [JsonIgnore]
+    public string EventLabel => EventLabels.ForEventType(EventType);
 }
