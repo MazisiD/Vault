@@ -263,13 +263,28 @@ export class VaultComponent {
         if (s) {
           this.summary.set(s);
         } else {
-          // Not found -> create it (blueprint 5.1).
+          // Not found -> create it (blueprint 5.1). A repeated create call can
+          // race with the first one while the page is still loading, so treat a
+          // duplicate-create response as success and then reload the summary.
           this.api.createVault(userId, this.auth.username || userId).subscribe({
             next: (created) => {
               this.summary.set(created);
               this.loadSchema(userId);
             },
-            error: (err) => this.fail(err, `Could not open a vault for "${userId}".`),
+            error: (err) => {
+              if (err?.status === 409) {
+                this.api.getVault(userId).subscribe({
+                  next: (existing) => {
+                    this.summary.set(existing);
+                    this.loadSchema(userId);
+                  },
+                  error: (retryErr) => this.fail(retryErr, `Could not open a vault for "${userId}".`),
+                });
+                return;
+              }
+
+              this.fail(err, `Could not open a vault for "${userId}".`);
+            },
           });
         }
       });

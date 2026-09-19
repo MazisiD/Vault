@@ -215,6 +215,7 @@ public static class VaultProjector
             case FieldDefinitionUpdated e when state.FieldDefinitions.TryGetValue(e.FieldDefinitionId, out var field):
                 field.Name = e.NewName ?? field.Name;
                 field.FieldType = e.NewFieldType ?? field.FieldType;
+                field.Choices = e.NewChoices ?? field.Choices;
                 field.IsSecret = e.NewIsSecret ?? field.IsSecret;
                 field.ItemNoun = e.NewItemNoun ?? field.ItemNoun;
                 break;

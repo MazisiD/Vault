@@ -51,6 +51,18 @@ public sealed class CategoryFieldSaveTests
     }
 
     [Fact]
+    public async Task CreatingAVault_WhenItAlreadyExists_ReturnsTheExistingVault()
+    {
+        var first = await _vaultService.CreateVaultAsync(new CreateVaultRequest(UserId, "Jane"));
+
+        var second = await _vaultService.CreateVaultAsync(new CreateVaultRequest(UserId, "Jane"));
+
+        Assert.Equal(first.UserId, second.UserId);
+        Assert.Equal(first.DisplayName, second.DisplayName);
+        Assert.Equal(first.Categories.Count, second.Categories.Count);
+    }
+
+    [Fact]
     public async Task SavingACategory_RecordsOneEventPerChangedField()
     {
         var (categoryId, fields) = await SeedAsync();

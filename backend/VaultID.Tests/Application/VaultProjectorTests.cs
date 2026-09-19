@@ -122,6 +122,36 @@ public sealed class VaultProjectorTests
     }
 
     [Fact]
+    public void FieldDefinitionUpdated_ChangesFieldTypeAndChoicesMetadata()
+    {
+        var categoryId = Guid.NewGuid();
+        var fieldId = Guid.NewGuid();
+
+        var events = new DomainEvent[]
+        {
+            new VaultCreated
+            {
+                VaultId = "user-1",
+                DisplayName = "Jane",
+                Categories = [new Category { Id = categoryId, Name = "Biographical", IsSystem = true }],
+                Fields = [new FieldDefinition { Id = fieldId, CategoryId = categoryId, Name = "Gender", FieldType = FieldType.Text, SortOrder = 0 }]
+            },
+            new FieldDefinitionUpdated
+            {
+                VaultId = "user-1",
+                FieldDefinitionId = fieldId,
+                NewFieldType = FieldType.Choice,
+                NewChoices = ["Female", "Male", "Other"]
+            }
+        };
+
+        var state = VaultProjector.Project("user-1", events);
+
+        Assert.Equal(FieldType.Choice, state.FieldDefinitions[fieldId].FieldType);
+        Assert.Equal(["Female", "Male", "Other"], state.FieldDefinitions[fieldId].Choices);
+    }
+
+    [Fact]
     public void CategoryShared_ProjectsAGrantKeyedByCategoryId()
     {
         var categoryId = Guid.NewGuid();

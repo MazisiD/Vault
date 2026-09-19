@@ -34,7 +34,7 @@ public sealed class VaultService(
         var state = await _repository.LoadStateAsync(request.UserId, ct);
         if (state.Exists)
         {
-            throw new ConflictException($"A vault already exists for user '{request.UserId}'.");
+            return await GetSummaryAsync(request.UserId, ct);
         }
 
         var categories = new List<Category>();
@@ -107,11 +107,7 @@ public sealed class VaultService(
     /// <summary>Returns a lightweight summary of the vault.</summary>
     public async Task<VaultSummary> GetSummaryAsync(string userId, CancellationToken ct = default)
     {
-        var state = await _repository.LoadStateAsync(userId, ct);
-        if (!state.Exists)
-        {
-            throw new NotFoundException($"No vault found for user '{userId}'.");
-        }
+        var state = await LoadStateWithLegacySystemSchemaAsync(userId, ct);
 
         var now = DateTimeOffset.UtcNow;
         var activeShares = state.Grants.Values.Count(g => g.IsCurrentlyActive(now));
@@ -132,11 +128,7 @@ public sealed class VaultService(
     /// <summary>Returns the current field values for one category (owner view).</summary>
     public async Task<CategoryView> GetCategoryAsync(string userId, Guid categoryId, CancellationToken ct = default)
     {
-        var state = await _repository.LoadStateAsync(userId, ct);
-        if (!state.Exists)
-        {
-            throw new NotFoundException($"No vault found for user '{userId}'.");
-        }
+        var state = await LoadStateWithLegacySystemSchemaAsync(userId, ct);
 
         if (!state.Categories.ContainsKey(categoryId))
         {
@@ -171,11 +163,7 @@ public sealed class VaultService(
     /// </summary>
     public async Task UpdateFieldAsync(string userId, UpdateFieldRequest request, CancellationToken ct = default)
     {
-        var state = await _repository.LoadStateAsync(userId, ct);
-        if (!state.Exists)
-        {
-            throw new NotFoundException($"No vault found for user '{userId}'.");
-        }
+        var state = await LoadStateWithLegacySystemSchemaAsync(userId, ct);
 
         if (!state.FieldDefinitions.TryGetValue(request.FieldDefinitionId, out var fieldDefinition))
         {
@@ -205,11 +193,7 @@ public sealed class VaultService(
     public async Task<CategoryView> UpdateCategoryFieldsAsync(
         string userId, UpdateCategoryFieldsRequest request, CancellationToken ct = default)
     {
-        var state = await _repository.LoadStateAsync(userId, ct);
-        if (!state.Exists)
-        {
-            throw new NotFoundException($"No vault found for user '{userId}'.");
-        }
+        var state = await LoadStateWithLegacySystemSchemaAsync(userId, ct);
 
         if (!state.Categories.ContainsKey(request.CategoryId))
         {
@@ -395,6 +379,83 @@ public sealed class VaultService(
                 OldValueHash = oldValue is null ? null : Hash(oldValue)
             });
             changedFieldIds.Add(value.FieldDefinitionId);
+        }
+    }
+
+    private async Task<VaultState> LoadStateWithLegacySystemSchemaAsync(string userId, CancellationToken ct)
+    {
+        var state = await _repository.LoadStateAsync(userId, ct);
+        if (!state.Exists)
+        {
+            throw new NotFoundException($"No vault found for user '{userId}'.");
+        }
+
+        var updates = new List<DomainEvent>();
+
+        foreach (var categorySeed in CategoryCatalog.SystemCategories)
+        {
+            var seedFields = FlattenSeedFields(categorySeed.Fields);
+            var category = state.Categories.Values.FirstOrDefault(c =>
+                string.Equals(c.Name, categorySeed.Name, StringComparison.OrdinalIgnoreCase));
+
+            if (category is null)
+            {
+                continue;
+            }
+
+            foreach (var seedField in seedFields)
+            {
+                var existing = state.FieldDefinitions.Values
+                    .Where(f => f.CategoryId == category.Id)
+                    .FirstOrDefault(f => string.Equals(f.Name, seedField.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (existing is null)
+                {
+                    continue;
+                }
+
+                var typeMatches = existing.FieldType == seedField.FieldType;
+                var choicesMatch = existing.Choices is null && seedField.Choices is null
+                    || existing.Choices is not null && seedField.Choices is not null
+                        && existing.Choices.SequenceEqual(seedField.Choices, StringComparer.Ordinal);
+
+                if (typeMatches && choicesMatch)
+                {
+                    continue;
+                }
+
+                updates.Add(new FieldDefinitionUpdated
+                {
+                    VaultId = userId,
+                    FieldDefinitionId = existing.Id,
+                    NewFieldType = seedField.FieldType,
+                    NewChoices = seedField.Choices
+                });
+            }
+        }
+
+        if (updates.Count == 0)
+        {
+            return state;
+        }
+
+        await _repository.AppendAsync(userId, state.Version, updates, ct);
+        return await _repository.LoadStateAsync(userId, ct);
+    }
+
+    private static IEnumerable<CategoryCatalog.SeedField> FlattenSeedFields(IEnumerable<CategoryCatalog.SeedField> fields)
+    {
+        foreach (var field in fields)
+        {
+            yield return field;
+
+            if (field.Children is not null)
+            {
+                foreach (var child in FlattenSeedFields(field.Children))
+                {
+                    yield return child;
+                }
+            }
         }
     }
 

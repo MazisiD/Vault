@@ -86,6 +86,7 @@ public sealed record FieldDefinitionUpdated : DomainEvent
     public required Guid FieldDefinitionId { get; init; }
     public string? NewName { get; init; }
     public FieldType? NewFieldType { get; init; }
+    public IReadOnlyList<string>? NewChoices { get; init; }
     public bool? NewIsSecret { get; init; }
     public string? NewItemNoun { get; init; }
 }

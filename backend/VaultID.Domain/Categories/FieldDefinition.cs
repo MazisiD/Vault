@@ -38,7 +38,7 @@ public sealed class FieldDefinition
     public string? AutocompleteToken { get; init; }
 
     /// <summary>Only meaningful when <see cref="FieldType"/> is <see cref="FieldType.Choice"/>.</summary>
-    public IReadOnlyList<string>? Choices { get; init; }
+    public IReadOnlyList<string>? Choices { get; set; }
 
     /// <summary>
     /// True for a value the owner would not want shoulder-surfed - an ID

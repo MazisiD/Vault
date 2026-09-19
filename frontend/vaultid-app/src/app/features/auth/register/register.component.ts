@@ -14,19 +14,33 @@ export class RegisterComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
+  accountType: 'individual' | 'organisation' = 'individual';
   username = '';
+  fullName = '';
+  organisationName = '';
   email = '';
   password = '';
   readonly submitting = signal(false);
   readonly error = signal('');
   readonly message = signal('');
 
+  get selectedAccountLabel(): string {
+    return this.accountType === 'organisation' ? 'Organisation or company' : 'Individual';
+  }
+
   async submit(): Promise<void> {
     this.error.set('');
     this.message.set('');
     this.submitting.set(true);
     try {
-      const result = await this.auth.register(this.username.trim(), this.email.trim(), this.password);
+      const displayName = this.accountType === 'organisation' ? this.organisationName.trim() : this.fullName.trim();
+      const result = await this.auth.register(
+        this.username.trim(),
+        this.email.trim(),
+        this.password,
+        this.accountType,
+        displayName,
+      );
       if (!result.ok) {
         this.error.set(result.error ?? 'Registration failed.');
         return;

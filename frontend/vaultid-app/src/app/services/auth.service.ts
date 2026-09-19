@@ -1,6 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import type { Session, User } from '@supabase/supabase-js';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { VaultApiService } from './vault-api.service';
 import { SupabaseService } from './supabase.service';
 
 export interface AuthResult {
@@ -21,6 +23,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly supabase = inject(SupabaseService).client;
+  private readonly vaultApi = inject(VaultApiService);
   private readonly readyPromise: Promise<void>;
 
   readonly session = signal<Session | null>(null);
@@ -50,13 +53,52 @@ export class AuthService {
     this.user.set(session?.user ?? null);
   }
 
-  async register(username: string, email: string, password: string): Promise<AuthResult> {
+  async register(
+    username: string,
+    email: string,
+    password: string,
+    accountType: 'individual' | 'organisation' = 'individual',
+    displayName = '',
+  ): Promise<AuthResult> {
+    const metadata: Record<string, string> = {
+      username,
+      account_type: accountType,
+    };
+
+    if (accountType === 'organisation' && displayName) {
+      metadata['organisation_name'] = displayName;
+    }
+
+    if (accountType === 'individual' && displayName) {
+      metadata['full_name'] = displayName;
+    }
+
     const { error } = await this.supabase.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      options: { data: metadata },
     });
-    return error ? { ok: false, error: error.message } : { ok: true };
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    const userId = this.user()?.id;
+    if (userId) {
+      try {
+        await firstValueFrom(this.vaultApi.createVault(userId, username));
+      } catch (err) {
+        const status = (err as { status?: number })?.status;
+        if (status !== 409) {
+          return {
+            ok: false,
+            error: 'Account created, but the vault could not be created. Please sign in and try again.',
+          };
+        }
+      }
+    }
+
+    return { ok: true };
   }
 
   async login(identifier: string, password: string): Promise<AuthResult> {
