@@ -26,6 +26,7 @@ public static class CategoryCatalog
         bool Secret = false,
         string? ItemNoun = null,
         bool IsItemTitle = false,
+        IReadOnlyList<string>? Choices = null,
         IReadOnlyList<SeedField>? Children = null);
 
     /// <summary>One seeded system category: a name and its ordered fields.</summary>
@@ -43,6 +44,27 @@ public static class CategoryCatalog
     /// <summary>The child of a Collection whose value names an item in a collapsed list.</summary>
     private static SeedField Title(string name) => new(name, IsItemTitle: true);
 
+    private static readonly string[] GenderChoices = ["Female", "Male", "Non-binary", "Prefer not to say", "Other"];
+    private static readonly string[] NationalityChoices = [
+        "South African", "Zimbabwean", "Kenyan", "Nigerian", "Ghanaian", "British", "American",
+        "Canadian", "Australian", "French", "German", "Dutch", "Spanish", "Portuguese", "Indian",
+        "Chinese", "Japanese", "Korean", "Arabic", "Italian", "Belgian", "Swiss", "Irish",
+        "New Zealander", "Scottish", "Welsh", "Romanian", "Greek", "Turkish", "Egyptian", "Other"
+    ];
+    private static readonly string[] HomeLanguageChoices = [
+        "English", "Afrikaans", "Zulu", "Xhosa", "Sotho", "Tswana", "Swati", "Venda", "Tsonga",
+        "Ndebele", "French", "Arabic", "Portuguese", "Spanish", "Hindi", "Mandarin", "German",
+        "Shona", "Swahili", "Other"
+    ];
+    private static readonly string[] MaritalStatusChoices = [
+        "Single", "Married", "Separated", "Divorced", "Widowed", "Domestic partnership",
+        "Prefer not to say", "Other"
+    ];
+    private static readonly string[] BloodTypeChoices = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]; 
+    private static readonly string[] DisabilityStatusChoices = ["None", "Physical disability", "Sensory disability", "Cognitive disability", "Chronic illness", "Prefer not to say", "Other"];
+    private static readonly string[] OrganDonorStatusChoices = ["Yes", "No", "Undecided", "Prefer not to say", "Other"];
+    private static readonly string[] ReligiousAffiliationChoices = ["Christianity", "Islam", "Hinduism", "Judaism", "Buddhism", "Atheist", "Agnostic", "Prefer not to say", "Other"];
+
     /// <summary>An address: the same four parts wherever one appears.</summary>
     private static SeedField Address(string name) =>
         Group(name,
@@ -59,17 +81,17 @@ public static class CategoryCatalog
         [
             new("FullName"),
             Secret("IdOrPassportNumber"),
-            new("DateOfBirth"),
-            new("Gender"),
+            new("DateOfBirth", FieldType.Date),
+            new("Gender", FieldType.Choice, Choices: GenderChoices),
             Address("PhysicalAddress"),
             Address("PostalAddress"),
             Collection("PhoneNumbers", "phone number",
                 Title("Label"),
                 new SeedField("Number")),
             new("EmailAddress"),
-            new("Nationality"),
-            new("HomeLanguage"),
-            new("MaritalStatus"),
+            new("Nationality", FieldType.Choice, Choices: NationalityChoices),
+            new("HomeLanguage", FieldType.Choice, Choices: HomeLanguageChoices),
+            new("MaritalStatus", FieldType.Choice, Choices: MaritalStatusChoices),
             Collection("EmergencyContacts", "contact",
                 Title("FullName"),
                 new SeedField("Relationship"),
@@ -113,7 +135,7 @@ public static class CategoryCatalog
         ]),
         new("Health",
         [
-            new("BloodType"),
+            new("BloodType", FieldType.Choice, Choices: BloodTypeChoices),
             new("KnownAllergies", FieldType.LongText),
             new("ChronicConditions", FieldType.LongText),
             Collection("CurrentMedications", "medication",
@@ -125,13 +147,13 @@ public static class CategoryCatalog
                 Secret("MembershipNumber"),
                 new SeedField("Plan")),
             new("VaccinationRecords", FieldType.LongText),
-            new("DisabilityStatus"),
+            new("DisabilityStatus", FieldType.Choice, Choices: DisabilityStatusChoices),
             new("PrimaryDoctor"),
-            new("OrganDonorStatus")
+            new("OrganDonorStatus", FieldType.Choice, Choices: OrganDonorStatusChoices)
         ]),
         new("Religious",
         [
-            new("ReligiousAffiliation"),
+            new("ReligiousAffiliation", FieldType.Choice, Choices: ReligiousAffiliationChoices),
             new("Denomination"),
             new("PlaceOfWorship"),
             new("DietaryRequirements", FieldType.LongText),

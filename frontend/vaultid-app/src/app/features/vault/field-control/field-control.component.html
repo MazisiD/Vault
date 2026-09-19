@@ -73,6 +73,11 @@
                      [(ngModel)]="newSubFieldName"
                      (keyup.enter)="confirmAddSubField()"
                      (keyup.escape)="cancelAddSubField()" />
+              <select class="input" [(ngModel)]="newSubFieldType">
+                @for (type of fieldTypeOptions; track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
               <button class="btn btn-primary" [disabled]="!newSubFieldName.trim()" (click)="confirmAddSubField()">Add</button>
               <button class="btn btn-ghost" (click)="cancelAddSubField()">Cancel</button>
             </div>
@@ -140,6 +145,29 @@
           (ngModelChange)="onInput($event)"
         />
       }
+      @case ('Time') {
+        <input
+          class="input"
+          type="time"
+          [id]="controlId"
+          [name]="controlName"
+          [attr.autocomplete]="field.autocompleteToken || null"
+          [ngModel]="displayValue()"
+          (ngModelChange)="onInput($event)"
+        />
+      }
+      @case ('Link') {
+        <input
+          class="input"
+          type="url"
+          [id]="controlId"
+          [name]="controlName"
+          [attr.autocomplete]="field.autocompleteToken || null"
+          [ngModel]="displayValue()"
+          (ngModelChange)="onInput($event)"
+          placeholder="https://example.com"
+        />
+      }
       @case ('Boolean') {
         <label class="vid-checkbox">
           <input
@@ -159,14 +187,23 @@
           [id]="controlId"
           [name]="controlName"
           [attr.autocomplete]="field.autocompleteToken || null"
-          [ngModel]="displayValue()"
-          (ngModelChange)="onInput($event)"
+          [ngModel]="selectedChoiceValue()"
+          (ngModelChange)="onChoiceSelect($event)"
         >
           <option value="">—</option>
-          @for (choice of field.choices; track choice) {
+          @for (choice of choiceOptions; track choice) {
             <option [value]="choice">{{ choice }}</option>
           }
         </select>
+        @if (selectedChoiceValue() === 'Other') {
+          <input
+            class="input"
+            type="text"
+            [ngModel]="otherChoiceValue()"
+            (ngModelChange)="onChoiceOther($event)"
+            placeholder="Please specify"
+          />
+        }
       }
       @case ('File') {
         <input
@@ -175,6 +212,16 @@
           [id]="controlId"
           [name]="controlName"
           value="File upload isn't supported yet"
+          disabled
+        />
+      }
+      @case ('Attachment') {
+        <input
+          class="input"
+          type="text"
+          [id]="controlId"
+          [name]="controlName"
+          value="Attachment upload isn't supported yet"
           disabled
         />
       }

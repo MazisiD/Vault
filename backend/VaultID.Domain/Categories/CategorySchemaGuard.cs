@@ -36,7 +36,7 @@ public static class CategorySchemaGuard
     /// field can never become one.
     /// </summary>
     public static bool CanPromoteToGroup(FieldDefinition field, bool hasValue) =>
-        field.FieldType != FieldType.File && !hasValue;
+        field.FieldType is not (FieldType.File or FieldType.Attachment) && !hasValue;
 
     /// <summary>
     /// A container field's delete cascades to its children only if every child

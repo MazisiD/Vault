@@ -33,9 +33,12 @@ export type FieldType =
   | 'LongText'
   | 'Number'
   | 'Date'
+  | 'Time'
+  | 'Link'
   | 'Boolean'
   | 'Choice'
   | 'File'
+  | 'Attachment'
   | 'Group'
   | 'Collection';
 

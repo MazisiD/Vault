@@ -11,9 +11,12 @@ public enum FieldType
     LongText,
     Number,
     Date,
+    Time,
+    Link,
     Boolean,
     Choice,
     File,
+    Attachment,
 
     /// <summary>
     /// A container holding exactly one set of sub-fields (an address, say).

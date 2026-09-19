@@ -90,7 +90,7 @@ public sealed class VaultService(
             Name = seed.Name,
             FieldType = seed.FieldType,
             AutocompleteToken = null,
-            Choices = null,
+            Choices = seed.Choices,
             IsSecret = seed.Secret,
             ItemNoun = seed.ItemNoun,
             IsItemTitle = seed.IsItemTitle,

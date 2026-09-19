@@ -126,6 +126,11 @@
                    [(ngModel)]="newFieldName"
                    (keyup.enter)="confirmAddField(cat)"
                    (keyup.escape)="cancelAddField()" />
+            <select class="input" [(ngModel)]="newFieldType">
+              @for (type of fieldTypes; track type) {
+                <option [value]="type">{{ type }}</option>
+              }
+            </select>
             <button class="btn btn-primary" [disabled]="!newFieldName.trim()" (click)="confirmAddField(cat)">Add</button>
             <button class="btn btn-ghost" (click)="cancelAddField()">Cancel</button>
           </div>

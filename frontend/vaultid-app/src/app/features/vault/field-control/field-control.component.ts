@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, OnDestroy, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
-import { FieldDefinition } from '../../../models';
+import { FieldDefinition, FieldType } from '../../../models';
 import { fieldMeta } from '../../../ui-meta';
 
 /** Emitted when the user changes a leaf field's control value (not yet saved). */
@@ -14,6 +14,7 @@ export interface FieldEditEvent {
 export interface AddSubFieldEvent {
   parentFieldId: string;
   name: string;
+  fieldType: FieldType;
 }
 
 /**
@@ -92,7 +93,9 @@ export class FieldControlComponent implements OnDestroy {
 
   readonly expanded = signal(true);
   readonly addingSubField = signal(false);
+  readonly fieldTypeOptions: FieldType[] = ['Text', 'LongText', 'Number', 'Date', 'Time', 'Link', 'Boolean', 'Choice', 'File', 'Attachment'];
   newSubFieldName = '';
+  newSubFieldType: FieldType = 'Text';
   /** Transient "Copied" acknowledgement on this row's copy button. */
   readonly copied = signal(false);
   private copiedTimer: ReturnType<typeof setTimeout> | null = null;
@@ -243,8 +246,39 @@ export class FieldControlComponent implements OnDestroy {
     this.onInput(checked ? 'true' : 'false');
   }
 
+  get choiceOptions(): string[] {
+    const values = this.field.choices ?? [];
+    return values.includes('Other') ? values : [...values, 'Other'];
+  }
+
+  selectedChoiceValue(): string {
+    const value = this.displayValue();
+    if (!value) {
+      return '';
+    }
+    return this.choiceOptions.includes(value) ? value : 'Other';
+  }
+
+  otherChoiceValue(): string {
+    const value = this.displayValue();
+    return value && !this.choiceOptions.includes(value) ? value : '';
+  }
+
+  onChoiceSelect(value: string): void {
+    if (value === 'Other') {
+      this.onInput(this.otherChoiceValue() || 'Other');
+      return;
+    }
+    this.onInput(value);
+  }
+
+  onChoiceOther(value: string): void {
+    this.onInput(value.trim() ? value : 'Other');
+  }
+
   startAddSubField(): void {
     this.newSubFieldName = '';
+    this.newSubFieldType = 'Text';
     this.expanded.set(true);
     this.addingSubField.set(true);
   }
@@ -259,7 +293,7 @@ export class FieldControlComponent implements OnDestroy {
     if (!name) {
       return;
     }
-    this.addSubField.emit({ parentFieldId: this.field.id, name });
+    this.addSubField.emit({ parentFieldId: this.field.id, name, fieldType: this.newSubFieldType });
     this.cancelAddSubField();
   }
 }

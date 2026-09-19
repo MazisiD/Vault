@@ -82,6 +82,13 @@ public sealed class FieldValueValidatorTests
     }
 
     [Fact]
+    public void Choice_AllowsCustomValueWhenOtherIsOffered()
+    {
+        var field = MakeField(FieldType.Choice, ["Female", "Male", "Other"]);
+        Assert.True(FieldValueValidator.TryValidate(field, "Non-binary", out _));
+    }
+
+    [Fact]
     public void Group_RejectsAnyValue()
     {
         var field = MakeField(FieldType.Group);

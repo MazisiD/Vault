@@ -4,7 +4,7 @@ import { catchError, of } from 'rxjs';
 import { VaultApiService } from '../../services/vault-api.service';
 import { AuthService } from '../../services/auth.service';
 import { SessionService } from '../../services/session.service';
-import { Category, CollectionItem, CollectionUpdate, FieldDefinition, VaultSummary } from '../../models';
+import { Category, CollectionItem, CollectionUpdate, FieldDefinition, FieldType, VaultSummary } from '../../models';
 import { categoryMeta, fieldMeta } from '../../ui-meta';
 import { AddSubFieldEvent, FieldControlComponent, FieldEditEvent } from './field-control/field-control.component';
 import {
@@ -167,7 +167,9 @@ export class VaultComponent {
   newCategoryName = '';
 
   readonly addingField = signal(false);
+  readonly fieldTypes: FieldType[] = ['Text', 'LongText', 'Number', 'Date', 'Time', 'Link', 'Boolean', 'Choice', 'File', 'Attachment'];
   newFieldName = '';
+  newFieldType: FieldType = 'Text';
 
   private get userId(): string {
     return this.session.userId();
@@ -590,6 +592,7 @@ export class VaultComponent {
 
   startAddField(): void {
     this.newFieldName = '';
+    this.newFieldType = 'Text';
     this.addingField.set(true);
   }
 
@@ -603,7 +606,7 @@ export class VaultComponent {
     if (!name) {
       return;
     }
-    this.api.createField(this.userId, cat.id, { name }).subscribe({
+    this.api.createField(this.userId, cat.id, { name, fieldType: this.newFieldType }).subscribe({
       next: () => {
         this.cancelAddField();
         this.succeed(`Added "${name}" to ${cat.name}.`);
@@ -614,7 +617,11 @@ export class VaultComponent {
 
   addSubField(cat: Category, event: AddSubFieldEvent): void {
     this.api
-      .createField(this.userId, cat.id, { name: event.name, parentFieldDefinitionId: event.parentFieldId })
+      .createField(this.userId, cat.id, {
+        name: event.name,
+        fieldType: event.fieldType,
+        parentFieldDefinitionId: event.parentFieldId,
+      })
       .subscribe({
         next: () => this.succeed(`Added sub-field "${event.name}".`),
         error: (err) => this.fail(err, 'Could not add that sub-field.'),

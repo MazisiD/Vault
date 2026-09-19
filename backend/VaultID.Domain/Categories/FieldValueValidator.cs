@@ -59,9 +59,34 @@ public static class FieldValueValidator
                 break;
 
             case FieldType.Choice:
-                if (value is null || field.Choices is null || !field.Choices.Contains(value, StringComparer.Ordinal))
+                if (value is null || string.IsNullOrWhiteSpace(value))
                 {
-                    error = $"'{value}' is not one of the allowed choices for field '{field.Name}'.";
+                    error = $"'{field.Name}' requires a choice value.";
+                    return false;
+                }
+
+                var choices = field.Choices ?? [];
+                if (choices.Contains(value, StringComparer.Ordinal) || (choices.Contains("Other", StringComparer.Ordinal) && !string.IsNullOrWhiteSpace(value)))
+                {
+                    break;
+                }
+
+                error = $"'{value}' is not one of the allowed choices for field '{field.Name}'.";
+                return false;
+
+            case FieldType.Time:
+                if (value is null || !TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out _))
+                {
+                    error = $"'{value}' is not a valid time for field '{field.Name}'.";
+                    return false;
+                }
+
+                break;
+
+            case FieldType.Link:
+                if (value is null || !Uri.TryCreate(value, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+                {
+                    error = $"'{value}' is not a valid http/https link for field '{field.Name}'.";
                     return false;
                 }
 
@@ -70,6 +95,7 @@ public static class FieldValueValidator
             case FieldType.Text:
             case FieldType.LongText:
             case FieldType.File:
+            case FieldType.Attachment:
                 // Any string; no length limit beyond the Api's transport-level cap.
                 break;
         }
