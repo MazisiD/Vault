@@ -63,7 +63,39 @@ public sealed record RegisterOrganisationBody(
     int RetentionDays,
     string LegalBasis,
     string? ThirdPartySharing,
+    string? DeletionCommitment,
+    string? RegistrationNumber = null,
+    string? Address = null,
+    string? Industry = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null);
+
+public sealed record UpdateOrganisationProfileBody(
+    string Name,
+    string? RegistrationNumber,
+    string? Address,
+    string? Industry,
+    string? ContactName,
+    string? ContactPhone,
+    string? ContactEmail);
+
+public sealed record UpdateOrganisationComplianceBody(
+    string Purpose,
+    int RetentionDays,
+    string LegalBasis,
+    string? ThirdPartySharing,
     string? DeletionCommitment);
+
+public sealed record SetCategoryAgreementBody(
+    string CategoryName,
+    string Purpose,
+    int RetentionDays,
+    string LegalBasis,
+    string? ThirdPartySharing,
+    string? DeletionCommitment);
+
+public sealed record AddPendingInvitesBody(IReadOnlyList<string> Emails);
 
 public sealed record VerifyBody(string Value);
 

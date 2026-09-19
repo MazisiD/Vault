@@ -1,0 +1,63 @@
+<div class="card elev-sm org-reg-step-card">
+  <h3>Category agreements</h3>
+  <p class="text-muted">
+    Optional. Set different terms for a specific category - anything you skip uses your organisation's default
+    agreement instead. You can always come back to this later.
+  </p>
+
+  @if (error()) {
+    <div class="vid-notice vid-notice--error">{{ error() }}</div>
+  }
+
+  @if (loading()) {
+    <p class="text-muted">Loading categories…</p>
+  } @else {
+    <ul class="cat-agreement-list">
+      @for (form of categories(); track form.categoryName) {
+        <li class="cat-agreement-item">
+          <button type="button" class="cat-agreement-header" (click)="toggle(form)">
+            <span>{{ form.categoryName }}</span>
+            @if (form.saved) {
+              <span class="cat-agreement-badge">Custom terms set</span>
+            }
+            <span aria-hidden="true">{{ form.expanded ? '−' : '+' }}</span>
+          </button>
+
+          @if (form.expanded) {
+            <form (ngSubmit)="save(form)" class="org-reg-form cat-agreement-form">
+              <div class="field">
+                <label [attr.for]="form.categoryName + '-purpose'">Purpose</label>
+                <input class="input" [id]="form.categoryName + '-purpose'" name="purpose" [(ngModel)]="form.purpose" required />
+              </div>
+              <div class="field">
+                <label [attr.for]="form.categoryName + '-retention'">Retention period (days)</label>
+                <input class="input" [id]="form.categoryName + '-retention'" name="retentionDays" type="number" min="1" [(ngModel)]="form.retentionDays" required />
+              </div>
+              <div class="field">
+                <label [attr.for]="form.categoryName + '-legal'">Legal basis</label>
+                <input class="input" [id]="form.categoryName + '-legal'" name="legalBasis" [(ngModel)]="form.legalBasis" required />
+              </div>
+              <div class="field">
+                <label [attr.for]="form.categoryName + '-third'">Third-party sharing (optional)</label>
+                <input class="input" [id]="form.categoryName + '-third'" name="thirdPartySharing" [(ngModel)]="form.thirdPartySharing" />
+              </div>
+              <div class="field">
+                <label [attr.for]="form.categoryName + '-deletion'">Deletion commitment (optional)</label>
+                <input class="input" [id]="form.categoryName + '-deletion'" name="deletionCommitment" [(ngModel)]="form.deletionCommitment" />
+              </div>
+              <div class="org-reg-actions">
+                <button class="btn btn-primary" type="submit" [disabled]="savingCategory() === form.categoryName">
+                  {{ savingCategory() === form.categoryName ? 'Saving…' : 'Save this category' }}
+                </button>
+              </div>
+            </form>
+          }
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="org-reg-actions">
+    <button class="btn btn-primary" type="button" (click)="continue()">Continue</button>
+  </div>
+</div>

@@ -5,7 +5,7 @@
   </div>
   <div class="org-header-actions">
     <span class="tag tag-outline">{{ approvedRecords().length }} approved</span>
-    <span class="tag tag-neutral">{{ isAwaitingApproval() ? 1 : 0 }} pending</span>
+    <span class="tag tag-neutral">{{ unapprovedRequests().length }} pending</span>
   </div>
 </div>
 
@@ -59,7 +59,7 @@
     <div class="org-metrics">
       <div class="metric">
         <span class="metric-label">Awaiting user approval</span>
-        <strong>{{ isAwaitingApproval() ? 1 : 0 }}</strong>
+        <strong>{{ unapprovedRequests().length }}</strong>
       </div>
       <div class="metric">
         <span class="metric-label">Approved records</span>
@@ -103,6 +103,43 @@
 <section class="card elev-sm org-section">
   <div class="section-head">
     <div>
+      <span class="eyebrow">History</span>
+      <h4>Share requests</h4>
+    </div>
+  </div>
+
+  @if (shareRequests().length) {
+    <div class="org-list org-list--requests">
+      @for (request of shareRequests(); track request.shareCodeId) {
+        <div class="org-list-item">
+          <div class="org-list-main">
+            <div class="avatar" [class.avatar--approved]="request.status === 'Approved'">
+              {{ (request.userDisplayName || request.userId || 'U').charAt(0) }}
+            </div>
+            <div>
+              <h5>{{ request.userDisplayName || request.userId || 'User' }}</h5>
+              <p>Requested {{ request.requestedAt | date: 'medium' }}</p>
+            </div>
+          </div>
+          <div class="org-list-meta">
+            <span class="tag" [ngClass]="'tag-status-' + request.status.toLowerCase()">{{ request.status }}</span>
+            <span class="muted">{{ request.fieldCount }} field value{{ request.fieldCount === 1 ? '' : 's' }}</span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="vid-empty org-empty">
+      <i class="ph ph-clipboard-text"></i>
+      <h4>No requests yet</h4>
+      <p>Once you redeem a share code, it will appear here with its current status.</p>
+    </div>
+  }
+</section>
+
+<section class="card elev-sm org-section">
+  <div class="section-head">
+    <div>
       <span class="eyebrow">Approved</span>
       <h4>Live shared data</h4>
     </div>
@@ -111,7 +148,7 @@
   @if (approvedRecords().length) {
     <div class="org-list org-list--approved">
       @for (row of approvedRecords(); track row.categoryId) {
-        <div class="org-list-item org-list-item--approved">
+        <div class="org-list-item org-list-item--approved org-list-item--expandable" (click)="toggleExpanded(row.categoryId)">
           <div class="org-list-main">
             <div class="avatar avatar--approved">{{ (row.displayName || row.userId || 'U').charAt(0) }}</div>
             <div>
@@ -122,8 +159,20 @@
           <div class="org-list-meta">
             <span class="tag tag-outline">Approved</span>
             <span class="muted">{{ row.fields.length }} field values</span>
+            <i class="ph" [class.ph-caret-down]="!isExpanded(row.categoryId)" [class.ph-caret-up]="isExpanded(row.categoryId)"></i>
           </div>
         </div>
+
+        @if (isExpanded(row.categoryId)) {
+          <div class="org-field-detail">
+            @for (field of row.fields; track field.label) {
+              <div class="org-field-detail-row">
+                <span class="org-field-detail-label">{{ field.label }}</span>
+                <span class="org-field-detail-value">{{ field.value }}</span>
+              </div>
+            }
+          </div>
+        }
       }
     </div>
   } @else {

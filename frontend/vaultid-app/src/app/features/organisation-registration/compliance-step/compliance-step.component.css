@@ -1,0 +1,20 @@
+.org-reg-step-card {
+  padding: var(--space-8);
+}
+
+.org-reg-step-card h3 {
+  margin-bottom: var(--space-2);
+}
+
+.org-reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.org-reg-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}

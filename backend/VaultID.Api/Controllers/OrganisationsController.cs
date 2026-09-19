@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using VaultID.Api.Contracts;
 using VaultID.Application.Contracts;
 using VaultID.Application.Services;
+using VaultID.Domain.Categories;
 
 namespace VaultID.Api.Controllers;
 
@@ -21,7 +22,9 @@ public sealed class OrganisationsController(OrganisationRegistryService registry
     {
         var org = await _registry.RegisterAsync(new RegisterOrganisationRequest(
             body.Name, body.Purpose, body.RetentionDays, body.LegalBasis,
-            body.ThirdPartySharing, body.DeletionCommitment), ct);
+            body.ThirdPartySharing, body.DeletionCommitment,
+            body.RegistrationNumber, body.Address, body.Industry,
+            body.ContactName, body.ContactPhone, body.ContactEmail), ct);
         return CreatedAtAction(nameof(Get), new { id = org.Id }, org);
     }
 
@@ -36,4 +39,38 @@ public sealed class OrganisationsController(OrganisationRegistryService registry
     [HttpGet("{id}/agreement")]
     public async Task<ActionResult<AgreementView>> GetAgreement(string id, CancellationToken ct) =>
         Ok(await _registry.GetAgreementAsync(id, ct));
+
+    /// <summary>The fixed set of system category names every vault seeds, for the org's per-category agreement step.</summary>
+    [HttpGet("category-catalog")]
+    public ActionResult<IReadOnlyList<string>> GetCategoryCatalog() =>
+        Ok(CategoryCatalog.SystemCategories.Select(c => c.Name).ToList());
+
+    [HttpPut("{id}/profile")]
+    public async Task<ActionResult<OrganisationView>> UpdateProfile(string id, UpdateOrganisationProfileBody body, CancellationToken ct) =>
+        Ok(await _registry.UpdateProfileAsync(id, new UpdateOrganisationProfileRequest(
+            body.Name, body.RegistrationNumber, body.Address, body.Industry,
+            body.ContactName, body.ContactPhone, body.ContactEmail), ct));
+
+    [HttpPut("{id}/compliance")]
+    public async Task<ActionResult<OrganisationView>> UpdateCompliance(string id, UpdateOrganisationComplianceBody body, CancellationToken ct) =>
+        Ok(await _registry.UpdateComplianceAsync(id, new UpdateOrganisationComplianceRequest(
+            body.Purpose, body.RetentionDays, body.LegalBasis, body.ThirdPartySharing, body.DeletionCommitment), ct));
+
+    [HttpGet("{id}/agreements")]
+    public async Task<ActionResult<IReadOnlyList<CategoryAgreementView>>> ListCategoryAgreements(string id, CancellationToken ct) =>
+        Ok(await _registry.ListCategoryAgreementsAsync(id, ct));
+
+    [HttpPut("{id}/agreements")]
+    public async Task<ActionResult<CategoryAgreementView>> SetCategoryAgreement(string id, SetCategoryAgreementBody body, CancellationToken ct) =>
+        Ok(await _registry.SetCategoryAgreementAsync(id, new SetCategoryAgreementRequest(
+            body.CategoryName, body.Purpose, body.RetentionDays, body.LegalBasis,
+            body.ThirdPartySharing, body.DeletionCommitment), ct));
+
+    [HttpDelete("{id}/agreements/{categoryName}")]
+    public async Task<ActionResult<CategoryAgreementView>> ClearCategoryAgreement(string id, string categoryName, CancellationToken ct) =>
+        Ok(await _registry.ClearCategoryAgreementAsync(id, categoryName, ct));
+
+    [HttpPost("{id}/invites")]
+    public async Task<ActionResult<IReadOnlyList<string>>> AddPendingInvites(string id, AddPendingInvitesBody body, CancellationToken ct) =>
+        Ok(await _registry.AddPendingInvitesAsync(id, new AddPendingInvitesRequest(body.Emails), ct));
 }

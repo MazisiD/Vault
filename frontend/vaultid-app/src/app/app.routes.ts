@@ -13,6 +13,19 @@ export const routes: Routes = [
       import('./features/auth/register/register.component').then((m) => m.RegisterComponent),
   },
   {
+    path: 'register/organisation',
+    loadComponent: () =>
+      import('./features/organisation-registration/organisation-registration.component').then(
+        (m) => m.OrganisationRegistrationComponent,
+      ),
+  },
+  {
+    path: 'organisation-admin',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/organisation-admin/organisation-admin.component').then((m) => m.OrganisationAdminComponent),
+  },
+  {
     path: 'forgot-password',
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password.component').then((m) => m.ForgotPasswordComponent),

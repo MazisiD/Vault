@@ -81,6 +81,7 @@ public sealed record ShareRequest(
 public sealed record GrantView(
     Guid GrantId,
     string UserId,
+    string UserDisplayName,
     string OrganisationId,
     string OrganisationName,
     Guid CategoryId,
@@ -167,6 +168,19 @@ public sealed record ShareCodeRedemptionView(
     DateTimeOffset AccessExpiresAt);
 
 /// <summary>
+/// One share-code request an organisation has redeemed, with its current
+/// status, for the organisation's own view of everything it has asked for.
+/// </summary>
+public sealed record OrganisationShareRequestView(
+    Guid ShareCodeId,
+    string UserId,
+    string UserDisplayName,
+    ShareCodeStatus Status,
+    int FieldCount,
+    DateTimeOffset RequestedAt,
+    DateTimeOffset AccessExpiresAt);
+
+/// <summary>
 /// One line of the activity feed. <paramref name="EventType"/> is the machine
 /// discriminator (used for icon/tone lookup and filtering);
 /// <paramref name="EventLabel"/> is the readable form - "Field updated" rather
@@ -187,7 +201,13 @@ public sealed record RegisterOrganisationRequest(
     int RetentionDays,
     string LegalBasis,
     string? ThirdPartySharing,
-    string? DeletionCommitment);
+    string? DeletionCommitment,
+    string? RegistrationNumber = null,
+    string? Address = null,
+    string? Industry = null,
+    string? ContactName = null,
+    string? ContactPhone = null,
+    string? ContactEmail = null);
 
 public sealed record AgreementView(
     string OrganisationId,
@@ -199,11 +219,55 @@ public sealed record AgreementView(
     string? ThirdPartySharing,
     string? DeletionCommitment);
 
+/// <summary>Organisation profile fields collected during onboarding, editable later by an admin.</summary>
+public sealed record OrganisationProfileView(
+    string? RegistrationNumber,
+    string? Address,
+    string? Industry,
+    string? ContactName,
+    string? ContactPhone,
+    string? ContactEmail);
+
+public sealed record UpdateOrganisationProfileRequest(
+    string Name,
+    string? RegistrationNumber,
+    string? Address,
+    string? Industry,
+    string? ContactName,
+    string? ContactPhone,
+    string? ContactEmail);
+
+public sealed record UpdateOrganisationComplianceRequest(
+    string Purpose,
+    int RetentionDays,
+    string LegalBasis,
+    string? ThirdPartySharing,
+    string? DeletionCommitment);
+
+/// <summary>Sets (or replaces) one category's own agreement terms, overriding the org default.</summary>
+public sealed record SetCategoryAgreementRequest(
+    string CategoryName,
+    string Purpose,
+    int RetentionDays,
+    string LegalBasis,
+    string? ThirdPartySharing,
+    string? DeletionCommitment);
+
+/// <summary>A category's effective agreement, and whether it's a custom override or the org default.</summary>
+public sealed record CategoryAgreementView(
+    string CategoryName,
+    bool HasOverride,
+    AgreementView Agreement);
+
+public sealed record AddPendingInvitesRequest(IReadOnlyList<string> Emails);
+
 public sealed record OrganisationView(
     string Id,
     string Name,
     string Status,
-    AgreementView? Agreement);
+    AgreementView? Agreement,
+    OrganisationProfileView? Profile = null,
+    IReadOnlyList<string>? PendingInvites = null);
 
 public sealed record VerifyResult(bool Matches);
 

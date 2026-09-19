@@ -11,53 +11,9 @@
 
     <form (ngSubmit)="submit()" class="register-form">
       <div class="field register-field">
-        <label>Account type</label>
-        <div class="seg register-seg" role="tablist" aria-label="Choose an account type">
-          <button
-            type="button"
-            class="seg-opt register-seg-opt"
-            [class.seg-opt--active]="accountType === 'individual'"
-            (click)="accountType = 'individual'"
-            [attr.aria-pressed]="accountType === 'individual'">
-            <span class="seg-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21a8 8 0 0 0-16 0"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-            </span>
-            <span>Register as an individual</span>
-          </button>
-          <button
-            type="button"
-            class="seg-opt register-seg-opt"
-            [class.seg-opt--active]="accountType === 'organisation'"
-            (click)="accountType = 'organisation'"
-            [attr.aria-pressed]="accountType === 'organisation'">
-            <span class="seg-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 20V8.5A1.5 1.5 0 0 1 5.5 7H9V20"/>
-                <path d="M9 20V4.5A1.5 1.5 0 0 1 10.5 3H18.5A1.5 1.5 0 0 1 20 4.5V20"/>
-                <path d="M9 10h11"/>
-                <path d="M9 14h11"/>
-              </svg>
-            </span>
-            <span>Register as an organisation or company</span>
-          </button>
-        </div>
+        <label for="fullName">Full name</label>
+        <input class="input register-input" id="fullName" name="fullName" [(ngModel)]="fullName" required autocomplete="name" placeholder="Jordan Ellis" />
       </div>
-
-      @if (accountType === 'individual') {
-        <div class="field register-field">
-          <label for="fullName">Full name</label>
-          <input class="input register-input" id="fullName" name="fullName" [(ngModel)]="fullName" required autocomplete="name" placeholder="Jordan Ellis" />
-        </div>
-      } @else {
-        <div class="field register-field">
-          <label for="organisationName">Organisation or company name</label>
-          <input class="input register-input" id="organisationName" name="organisationName" [(ngModel)]="organisationName" required autocomplete="organization" placeholder="Acme Holdings" />
-        </div>
-      }
-
       <div class="field register-field">
         <label for="username">Username</label>
         <input class="input register-input" id="username" name="username" [(ngModel)]="username" required minlength="3" autocomplete="username" placeholder="jordan.ellis" />
@@ -71,10 +27,11 @@
         <input class="input register-input register-input--password" id="password" name="password" type="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters" />
       </div>
       <button class="btn btn-primary register-submit" type="submit" [disabled]="submitting()">
-        {{ submitting() ? 'Creating account…' : 'Register as ' + selectedAccountLabel }}
+        {{ submitting() ? 'Creating account…' : 'Register' }}
       </button>
     </form>
 
     <p class="text-muted register-login">Already have an account? <a routerLink="/login">Log in</a></p>
+    <p class="text-muted register-login">Registering an organisation? <a routerLink="/register/organisation">Set it up here</a></p>
   </div>
 </div>

@@ -1,0 +1,60 @@
+.org-reg-step-card {
+  padding: var(--space-8);
+}
+
+.org-reg-step-card h3 {
+  margin-bottom: var(--space-2);
+}
+
+.org-reg-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.org-reg-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.cat-agreement-list {
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cat-agreement-item {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+}
+
+.cat-agreement-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.cat-agreement-badge {
+  margin-left: auto;
+  margin-right: var(--space-3);
+  font-size: 12px;
+  color: var(--color-accent);
+}
+
+.cat-agreement-form {
+  padding: 0 var(--space-4) var(--space-4);
+}

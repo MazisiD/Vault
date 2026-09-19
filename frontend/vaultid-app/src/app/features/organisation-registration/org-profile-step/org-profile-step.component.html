@@ -1,0 +1,43 @@
+<div class="card elev-sm org-reg-step-card">
+  <h3>Tell us about your organisation</h3>
+  <p class="text-muted">Name and purpose are required; the rest can be filled in later from organisation settings.</p>
+
+  <form (ngSubmit)="continue()" class="org-reg-form">
+    <div class="field">
+      <label for="name">Organisation name</label>
+      <input class="input" id="name" name="name" [(ngModel)]="name" required autocomplete="organization" placeholder="Acme Holdings" />
+    </div>
+    <div class="field">
+      <label for="purpose">Purpose of processing data</label>
+      <input class="input" id="purpose" name="purpose" [(ngModel)]="purpose" required placeholder="e.g. To verify employee identity documents" />
+    </div>
+    <div class="field">
+      <label for="registrationNumber">Registration number</label>
+      <input class="input" id="registrationNumber" name="registrationNumber" [(ngModel)]="registrationNumber" placeholder="2024/123456/07" />
+    </div>
+    <div class="field">
+      <label for="industry">Industry</label>
+      <input class="input" id="industry" name="industry" [(ngModel)]="industry" placeholder="Financial services" />
+    </div>
+    <div class="field">
+      <label for="address">Address</label>
+      <input class="input" id="address" name="address" [(ngModel)]="address" autocomplete="street-address" placeholder="1 Main Road, Cape Town" />
+    </div>
+    <div class="field">
+      <label for="contactName">Primary contact person</label>
+      <input class="input" id="contactName" name="contactName" [(ngModel)]="contactName" placeholder="Jordan Ellis" />
+    </div>
+    <div class="field">
+      <label for="contactPhone">Contact phone</label>
+      <input class="input" id="contactPhone" name="contactPhone" [(ngModel)]="contactPhone" autocomplete="tel" placeholder="+27 21 555 0100" />
+    </div>
+    <div class="field">
+      <label for="contactEmail">Support email</label>
+      <input class="input" id="contactEmail" name="contactEmail" type="email" [(ngModel)]="contactEmail" placeholder="support@acme.com" />
+    </div>
+
+    <div class="org-reg-actions">
+      <button class="btn btn-primary" type="submit">Continue</button>
+    </div>
+  </form>
+</div>

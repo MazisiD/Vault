@@ -33,12 +33,16 @@ public sealed class GrantQueryService(
 
         // GrantId -> (mutable projected grant fields)
         var grants = new Dictionary<Guid, ProjectedGrant>();
+        var displayNames = new Dictionary<string, string>();
 
         foreach (var s in stored)
         {
             var e = _serializer.Deserialize(s);
             switch (e)
             {
+                case VaultCreated vc:
+                    displayNames[vc.VaultId] = vc.DisplayName;
+                    break;
                 case CategoryShared cs when cs.OrganisationId == organisationId:
                     grants[cs.GrantId] = new ProjectedGrant(
                         cs.GrantId, cs.VaultId, cs.OrganisationId, cs.CategoryId, cs.Scope,
@@ -66,9 +70,69 @@ public sealed class GrantQueryService(
             .Where(g => g.Status == GrantStatus.Active && (g.ExpiresAt is null || g.ExpiresAt > now))
             .OrderByDescending(g => g.ConsentedAt)
             .Select(g => new GrantView(
-                g.GrantId, g.UserId, g.OrganisationId, orgName, g.CategoryId, g.Scope,
-                g.Duration, g.AgreementId, g.ExpiresAt, g.Status, g.ConsentedAt,
+                g.GrantId, g.UserId, displayNames.GetValueOrDefault(g.UserId, g.UserId), g.OrganisationId, orgName,
+                g.CategoryId, g.Scope, g.Duration, g.AgreementId, g.ExpiresAt, g.Status, g.ConsentedAt,
                 g.FieldDefinitionIds))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Lists every share-code request this organisation has ever redeemed, with
+    /// its current status, so the organisation can see requests it is still
+    /// awaiting a decision on (or that were rejected/expired/revoked) alongside
+    /// the ones that were approved.
+    /// </summary>
+    public async Task<IReadOnlyList<OrganisationShareRequestView>> ListShareRequestsForOrganisationAsync(
+        string organisationId, CancellationToken ct = default)
+    {
+        var stored = await _eventStore.ReadAllAsync(cancellationToken: ct);
+
+        var displayNames = new Dictionary<string, string>();
+        var fieldCounts = new Dictionary<Guid, int>();
+        var accessExpiries = new Dictionary<Guid, DateTimeOffset>();
+        var requests = new Dictionary<Guid, ProjectedShareRequest>();
+
+        foreach (var s in stored)
+        {
+            var e = _serializer.Deserialize(s);
+            switch (e)
+            {
+                case VaultCreated vc:
+                    displayNames[vc.VaultId] = vc.DisplayName;
+                    break;
+                case ShareCodeGenerated g:
+                    fieldCounts[g.ShareCodeId] = g.FieldDefinitionIds.Count;
+                    accessExpiries[g.ShareCodeId] = g.AccessExpiresAt;
+                    break;
+                case ShareCodeRedeemed r when r.OrganisationId == organisationId:
+                    requests[r.ShareCodeId] = new ProjectedShareRequest(
+                        r.ShareCodeId, r.VaultId, r.OrganisationId, ShareCodeStatus.AwaitingApproval, r.OccurredAt);
+                    break;
+                case ShareCodeApproved a when requests.ContainsKey(a.ShareCodeId):
+                    requests[a.ShareCodeId] = requests[a.ShareCodeId] with { Status = ShareCodeStatus.Approved };
+                    break;
+                case ShareCodeRejected rj when requests.ContainsKey(rj.ShareCodeId):
+                    requests[rj.ShareCodeId] = requests[rj.ShareCodeId] with { Status = ShareCodeStatus.Rejected };
+                    break;
+                case ShareCodeRevoked rv when requests.ContainsKey(rv.ShareCodeId):
+                    requests[rv.ShareCodeId] = requests[rv.ShareCodeId] with { Status = ShareCodeStatus.Revoked };
+                    break;
+                case ShareCodeExpired ex when requests.ContainsKey(ex.ShareCodeId):
+                    requests[ex.ShareCodeId] = requests[ex.ShareCodeId] with { Status = ShareCodeStatus.Expired };
+                    break;
+            }
+        }
+
+        return requests.Values
+            .OrderByDescending(r => r.RequestedAt)
+            .Select(r => new OrganisationShareRequestView(
+                r.ShareCodeId,
+                r.UserId,
+                displayNames.GetValueOrDefault(r.UserId, r.UserId),
+                r.Status,
+                fieldCounts.GetValueOrDefault(r.ShareCodeId, 0),
+                r.RequestedAt,
+                accessExpiries.GetValueOrDefault(r.ShareCodeId, r.RequestedAt)))
             .ToList();
     }
 
@@ -96,4 +160,11 @@ public sealed class GrantQueryService(
         GrantStatus Status,
         DateTimeOffset ConsentedAt,
         IReadOnlyList<Guid>? FieldDefinitionIds);
+
+    private sealed record ProjectedShareRequest(
+        Guid ShareCodeId,
+        string UserId,
+        string OrganisationId,
+        ShareCodeStatus Status,
+        DateTimeOffset RequestedAt);
 }

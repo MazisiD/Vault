@@ -1,0 +1,162 @@
+<div class="org-admin-shell">
+  <h2>Organisation settings</h2>
+
+  @if (loading()) {
+    <p class="text-muted">Loading…</p>
+  } @else if (!organisationId()) {
+    <div class="card elev-sm org-admin-card">
+      <p>Your account isn't linked to a registered organisation yet.</p>
+      <a class="btn btn-primary" routerLink="/register/organisation">Register an organisation</a>
+    </div>
+  } @else {
+    @if (error()) {
+      <div class="vid-notice vid-notice--error">{{ error() }}</div>
+    }
+    @if (message()) {
+      <div class="vid-notice">{{ message() }}</div>
+    }
+
+    <section class="card elev-sm org-admin-card">
+      <h3>Profile</h3>
+      <form (ngSubmit)="saveProfile()" class="org-admin-form">
+        <div class="field">
+          <label for="name">Organisation name</label>
+          <input class="input" id="name" name="name" [(ngModel)]="name" required />
+        </div>
+        <div class="field">
+          <label for="registrationNumber">Registration number</label>
+          <input class="input" id="registrationNumber" name="registrationNumber" [(ngModel)]="registrationNumber" />
+        </div>
+        <div class="field">
+          <label for="industry">Industry</label>
+          <input class="input" id="industry" name="industry" [(ngModel)]="industry" />
+        </div>
+        <div class="field">
+          <label for="address">Address</label>
+          <input class="input" id="address" name="address" [(ngModel)]="address" />
+        </div>
+        <div class="field">
+          <label for="contactName">Primary contact</label>
+          <input class="input" id="contactName" name="contactName" [(ngModel)]="contactName" />
+        </div>
+        <div class="field">
+          <label for="contactPhone">Contact phone</label>
+          <input class="input" id="contactPhone" name="contactPhone" [(ngModel)]="contactPhone" />
+        </div>
+        <div class="field">
+          <label for="contactEmail">Support email</label>
+          <input class="input" id="contactEmail" name="contactEmail" type="email" [(ngModel)]="contactEmail" />
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="savingProfile()">
+          {{ savingProfile() ? 'Saving…' : 'Save profile' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="card elev-sm org-admin-card">
+      <h3>Default agreement (data handling & compliance)</h3>
+      <form (ngSubmit)="saveCompliance()" class="org-admin-form">
+        <div class="field">
+          <label for="purpose">Purpose</label>
+          <input class="input" id="purpose" name="purpose" [(ngModel)]="purpose" required />
+        </div>
+        <div class="field">
+          <label for="retentionDays">Retention period (days)</label>
+          <input class="input" id="retentionDays" name="retentionDays" type="number" min="1" [(ngModel)]="retentionDays" required />
+        </div>
+        <div class="field">
+          <label for="legalBasis">Legal basis</label>
+          <input class="input" id="legalBasis" name="legalBasis" [(ngModel)]="legalBasis" required />
+        </div>
+        <div class="field">
+          <label for="thirdPartySharing">Third-party sharing</label>
+          <input class="input" id="thirdPartySharing" name="thirdPartySharing" [(ngModel)]="thirdPartySharing" />
+        </div>
+        <div class="field">
+          <label for="deletionCommitment">Deletion commitment</label>
+          <input class="input" id="deletionCommitment" name="deletionCommitment" [(ngModel)]="deletionCommitment" />
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="savingCompliance()">
+          {{ savingCompliance() ? 'Saving…' : 'Save default agreement' }}
+        </button>
+      </form>
+    </section>
+
+    <section class="card elev-sm org-admin-card">
+      <h3>Category agreements</h3>
+      <p class="text-muted">Override the default agreement for a specific category, or clear it to fall back to the default.</p>
+      <ul class="org-admin-category-list">
+        @for (row of categoryRows(); track row.categoryName) {
+          <li class="org-admin-category-item">
+            <button type="button" class="org-admin-category-header" (click)="toggleCategory(row)">
+              <span>{{ row.categoryName }}</span>
+              @if (row.hasOverride) {
+                <span class="org-admin-badge">Custom terms</span>
+              } @else {
+                <span class="text-muted">Uses default</span>
+              }
+              <span aria-hidden="true">{{ row.expanded ? '−' : '+' }}</span>
+            </button>
+
+            @if (row.expanded) {
+              <form (ngSubmit)="saveCategory(row)" class="org-admin-form org-admin-category-form">
+                <div class="field">
+                  <label>Purpose</label>
+                  <input class="input" name="purpose" [(ngModel)]="row.purpose" required />
+                </div>
+                <div class="field">
+                  <label>Retention period (days)</label>
+                  <input class="input" name="retentionDays" type="number" min="1" [(ngModel)]="row.retentionDays" required />
+                </div>
+                <div class="field">
+                  <label>Legal basis</label>
+                  <input class="input" name="legalBasis" [(ngModel)]="row.legalBasis" required />
+                </div>
+                <div class="field">
+                  <label>Third-party sharing</label>
+                  <input class="input" name="thirdPartySharing" [(ngModel)]="row.thirdPartySharing" />
+                </div>
+                <div class="field">
+                  <label>Deletion commitment</label>
+                  <input class="input" name="deletionCommitment" [(ngModel)]="row.deletionCommitment" />
+                </div>
+                <div class="org-admin-category-actions">
+                  <button class="btn btn-primary" type="submit" [disabled]="savingCategory() === row.categoryName">
+                    {{ savingCategory() === row.categoryName ? 'Saving…' : 'Save' }}
+                  </button>
+                  @if (row.hasOverride) {
+                    <button class="btn btn-secondary" type="button" (click)="clearCategory(row)" [disabled]="savingCategory() === row.categoryName">
+                      Revert to default
+                    </button>
+                  }
+                </div>
+              </form>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="card elev-sm org-admin-card">
+      <h3>Team invites</h3>
+      @if (pendingInvites.length > 0) {
+        <ul class="org-admin-invite-list">
+          @for (email of pendingInvites; track email) {
+            <li>{{ email }}</li>
+          }
+        </ul>
+      } @else {
+        <p class="text-muted">No pending invites.</p>
+      }
+      <form (ngSubmit)="addInvites()" class="org-admin-form">
+        <div class="field">
+          <label for="newInviteEmails">Add colleague emails</label>
+          <textarea class="input" id="newInviteEmails" name="newInviteEmails" rows="3" [(ngModel)]="newInviteEmails" placeholder="alex@acme.com"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit" [disabled]="savingInvites()">
+          {{ savingInvites() ? 'Adding…' : 'Add invites' }}
+        </button>
+      </form>
+    </section>
+  }
+</div>

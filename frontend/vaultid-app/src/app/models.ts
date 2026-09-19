@@ -142,16 +142,79 @@ export interface Agreement {
   deletionCommitment?: string | null;
 }
 
+/** Organisation profile fields collected during onboarding, editable later by an admin. Mirrors `OrganisationProfileView`. */
+export interface OrganisationProfile {
+  registrationNumber?: string | null;
+  address?: string | null;
+  industry?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+}
+
 export interface Organisation {
   id: string;
   name: string;
   status: string;
   agreement?: Agreement | null;
+  profile?: OrganisationProfile | null;
+  pendingInvites?: string[] | null;
+}
+
+/** Everything the registration wizard's "organisation profile" and "compliance" steps collect, in one call. */
+export interface RegisterOrganisationRequest {
+  name: string;
+  purpose: string;
+  retentionDays: number;
+  legalBasis: string;
+  thirdPartySharing?: string | null;
+  deletionCommitment?: string | null;
+  registrationNumber?: string | null;
+  address?: string | null;
+  industry?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+}
+
+export interface UpdateOrganisationProfileRequest {
+  name: string;
+  registrationNumber?: string | null;
+  address?: string | null;
+  industry?: string | null;
+  contactName?: string | null;
+  contactPhone?: string | null;
+  contactEmail?: string | null;
+}
+
+export interface UpdateOrganisationComplianceRequest {
+  purpose: string;
+  retentionDays: number;
+  legalBasis: string;
+  thirdPartySharing?: string | null;
+  deletionCommitment?: string | null;
+}
+
+/** A category's effective agreement, and whether it's a custom override or the org default. Mirrors `CategoryAgreementView`. */
+export interface CategoryAgreementView {
+  categoryName: string;
+  hasOverride: boolean;
+  agreement: Agreement;
+}
+
+export interface SetCategoryAgreementRequest {
+  categoryName: string;
+  purpose: string;
+  retentionDays: number;
+  legalBasis: string;
+  thirdPartySharing?: string | null;
+  deletionCommitment?: string | null;
 }
 
 export interface Grant {
   grantId: string;
   userId: string;
+  userDisplayName: string;
   organisationId: string;
   organisationName: string;
   categoryId: string;
@@ -205,6 +268,17 @@ export interface ShareCodeRedemptionView {
   userId: string;
   status: ShareCodeStatus;
   fieldCount: number;
+  accessExpiresAt: string;
+}
+
+/** One share-code request an organisation has redeemed, with its current status. Mirrors `OrganisationShareRequestView`. */
+export interface OrganisationShareRequest {
+  shareCodeId: string;
+  userId: string;
+  userDisplayName: string;
+  status: ShareCodeStatus;
+  fieldCount: number;
+  requestedAt: string;
   accessExpiresAt: string;
 }
 

@@ -32,13 +32,14 @@ public sealed class SharingService(
             throw new NotFoundException($"No vault found for user '{userId}'.");
         }
 
-        if (!state.Categories.ContainsKey(request.CategoryId))
+        if (!state.Categories.TryGetValue(request.CategoryId, out var category))
         {
             throw new ValidationException($"Vault has no category '{request.CategoryId}'.");
         }
 
-        // The organisation must have a (compliance-approved) DPA to present.
-        var agreement = await _organisations.GetAgreementAsync(request.OrganisationId, ct);
+        // The organisation must have a (compliance-approved) DPA to present for
+        // this category - either its own override or the org-wide default.
+        var agreement = await _organisations.GetAgreementForCategoryAsync(request.OrganisationId, category.Name, ct);
         var org = await _organisations.GetAsync(request.OrganisationId, ct);
         if (org.Status is not "approved")
         {
@@ -75,6 +76,7 @@ public sealed class SharingService(
         return new GrantView(
             grantId,
             userId,
+            state.DisplayName,
             request.OrganisationId,
             org.Name,
             request.CategoryId,
@@ -136,7 +138,7 @@ public sealed class SharingService(
         await _repository.AppendAsync(userId, state.Version, [renewed], ct);
 
         var newState = await _repository.LoadStateAsync(userId, ct);
-        return await ToViewAsync(newState.Grants[grant.Id], ct);
+        return await ToViewAsync(newState, newState.Grants[grant.Id], ct);
     }
 
     /// <summary>
@@ -172,7 +174,7 @@ public sealed class SharingService(
         await _repository.AppendAsync(userId, state.Version, [changed], ct);
 
         var newState = await _repository.LoadStateAsync(userId, ct);
-        return await ToViewAsync(newState.Grants[grant.Id], ct);
+        return await ToViewAsync(newState, newState.Grants[grant.Id], ct);
     }
 
     /// <summary>Lists all grants for a user, newest first, with org names.</summary>
@@ -182,7 +184,7 @@ public sealed class SharingService(
         var views = new List<GrantView>();
         foreach (var grant in state.Grants.Values.OrderByDescending(g => g.ConsentedAt))
         {
-            views.Add(await ToViewAsync(grant, ct));
+            views.Add(await ToViewAsync(state, grant, ct));
         }
 
         return views;
@@ -262,7 +264,7 @@ public sealed class SharingService(
             ? grant
             : throw new NotFoundException($"Grant '{grantId}' not found.");
 
-    private async Task<GrantView> ToViewAsync(PermissionGrant grant, CancellationToken ct)
+    private async Task<GrantView> ToViewAsync(VaultState state, PermissionGrant grant, CancellationToken ct)
     {
         string orgName;
         try
@@ -277,6 +279,7 @@ public sealed class SharingService(
         return new GrantView(
             grant.Id,
             grant.GrantorUserId,
+            state.DisplayName,
             grant.GranteeOrganisationId,
             orgName,
             grant.CategoryId,

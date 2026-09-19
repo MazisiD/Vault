@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CategoryView, Grant, Organisation, ShareCodeRedemptionView } from '../../models';
+import { CategoryView, Grant, Organisation, OrganisationShareRequest, ShareCodeRedemptionView } from '../../models';
 import { VaultApiService } from '../../services/vault-api.service';
 
 interface SharedDataRow {
@@ -34,8 +34,13 @@ export class OrganisationComponent {
   readonly selectedOrganisationName = signal('');
   readonly redemption = signal<ShareCodeRedemptionView | null>(null);
   readonly approvedRecords = signal<SharedDataRow[]>([]);
+  readonly shareRequests = signal<OrganisationShareRequest[]>([]);
+  readonly expandedCategoryIds = signal<ReadonlySet<string>>(new Set());
 
   readonly isAwaitingApproval = computed(() => this.redemption()?.status === 'AwaitingApproval');
+  readonly unapprovedRequests = computed(() =>
+    this.shareRequests().filter((r) => r.status === 'AwaitingApproval'),
+  );
 
   constructor() {
     this.searchOrganisations();
@@ -52,6 +57,8 @@ export class OrganisationComponent {
     this.stopApprovalPolling();
 
     const poll = () => {
+      this.loadShareRequests();
+
       this.api
         .listOrganisationGrants(this.selectedOrganisationId())
         .pipe(catchError(() => of([] as Grant[])))
@@ -87,8 +94,23 @@ export class OrganisationComponent {
 
         if (this.selectedOrganisationId()) {
           this.loadApprovedDataForOrganisation();
+          this.loadShareRequests();
         }
       });
+  }
+
+  toggleExpanded(categoryId: string): void {
+    const expanded = new Set(this.expandedCategoryIds());
+    if (expanded.has(categoryId)) {
+      expanded.delete(categoryId);
+    } else {
+      expanded.add(categoryId);
+    }
+    this.expandedCategoryIds.set(expanded);
+  }
+
+  isExpanded(categoryId: string): boolean {
+    return this.expandedCategoryIds().has(categoryId);
   }
 
   lookupShareCode(): void {
@@ -137,7 +159,15 @@ export class OrganisationComponent {
         this.stopApprovalPolling();
         this.statusMessage.set('The user has approved this request. Live data is now visible below.');
         this.loadApprovedDataForOrganisation();
+        this.loadShareRequests();
       });
+  }
+
+  private loadShareRequests(): void {
+    this.api
+      .listOrganisationShareRequests(this.selectedOrganisationId())
+      .pipe(catchError(() => of([] as OrganisationShareRequest[])))
+      .subscribe((requests) => this.shareRequests.set(Array.isArray(requests) ? requests : []));
   }
 
   private loadApprovedDataForOrganisation(): void {
@@ -171,37 +201,11 @@ export class OrganisationComponent {
       value: value ?? 'Not shared',
     }));
 
-    const displayName = this.resolveDisplayName(grant, category);
-
     return {
       categoryId: grant.categoryId,
-      displayName,
+      displayName: grant.userDisplayName || grant.userId,
       userId: grant.userId,
       fields: entries.length ? entries : [{ label: 'Status', value: 'Access requested and active' }],
     };
-  }
-
-  private resolveDisplayName(grant: Grant, category: CategoryView): string {
-    const values = category.fields ?? {};
-
-    const explicitKey = Object.entries(values).find(([fieldKey, value]) => {
-      if (!value) {
-        return false;
-      }
-
-      const normalized = fieldKey.replace(/[_\s-]+/g, '').toLowerCase();
-      return normalized === 'fullname' || normalized === 'displayname' || normalized === 'name';
-    });
-
-    if (explicitKey?.[1]) {
-      return explicitKey[1].trim();
-    }
-
-    const firstValue = Object.values(values).find((value) => !!value && value.trim().length > 0);
-    if (firstValue) {
-      return firstValue.trim();
-    }
-
-    return grant.userId;
   }
 }

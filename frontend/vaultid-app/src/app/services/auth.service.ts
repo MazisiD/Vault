@@ -57,6 +57,11 @@ export class AuthService {
     return this.accountType === 'organisation';
   }
 
+  get organisationId(): string | null {
+    const meta = this.user()?.user_metadata as Record<string, unknown> | undefined;
+    return (meta?.['organisation_id'] as string | undefined) ?? null;
+  }
+
   private setSession(session: Session | null): void {
     this.session.set(session);
     this.user.set(session?.user ?? null);
@@ -108,6 +113,28 @@ export class AuthService {
     }
 
     return { ok: true };
+  }
+
+  /**
+   * Signs up the founding admin of a new organisation. Unlike an individual
+   * sign-up this never creates a personal vault - the admin manages the
+   * organisation record instead, linked afterwards via {@link linkOrganisation}
+   * once it's been registered with the backend.
+   */
+  async registerOrganisationAdmin(email: string, password: string, adminName: string): Promise<AuthResult> {
+    const { error } = await this.supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { account_type: 'organisation', role: 'admin', full_name: adminName } },
+    });
+
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+
+  /** Links the signed-in admin's account to the organisation record created for them. */
+  async linkOrganisation(organisationId: string): Promise<AuthResult> {
+    const { error } = await this.supabase.auth.updateUser({ data: { organisation_id: organisationId } });
+    return error ? { ok: false, error: error.message } : { ok: true };
   }
 
   async login(identifier: string, password: string): Promise<AuthResult> {

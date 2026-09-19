@@ -123,6 +123,21 @@ public sealed class OrganisationApiController(
         return Ok(await _grants.ListActiveForOrganisationAsync(orgId, ct));
     }
 
+    /// <summary>
+    /// Every share-code request this organisation has redeemed, whatever its
+    /// current status - awaiting approval, approved, rejected, revoked or expired.
+    /// </summary>
+    [HttpGet("share-requests")]
+    public async Task<IActionResult> ListShareRequests(CancellationToken ct)
+    {
+        if (!TryGetOrg(out var orgId))
+        {
+            return MissingOrg();
+        }
+
+        return Ok(await _grants.ListShareRequestsForOrganisationAsync(orgId, ct));
+    }
+
     // --- Helpers (transport concerns only) ---
 
     private bool TryGetOrg(out string organisationId)

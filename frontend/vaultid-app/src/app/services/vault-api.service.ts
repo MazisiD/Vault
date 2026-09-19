@@ -3,9 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
-  ActivityEntry, Agreement, Category, CategoryView, ConsentMethod, FieldDefinition, FieldType,
-  GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, PendingShareRequest,
-  ShareCode, ShareCodeRedemptionView, ShareDuration, ShareRequest, UpdateCategoryFieldsRequest, VaultSummary,
+  ActivityEntry, Agreement, Category, CategoryAgreementView, CategoryView, ConsentMethod, FieldDefinition, FieldType,
+  GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, OrganisationShareRequest, PendingShareRequest,
+  RegisterOrganisationRequest, SetCategoryAgreementRequest, ShareCode, ShareCodeRedemptionView, ShareDuration,
+  ShareRequest, UpdateCategoryFieldsRequest, UpdateOrganisationComplianceRequest, UpdateOrganisationProfileRequest,
+  VaultSummary,
 } from '../models';
 
 /**
@@ -157,6 +159,44 @@ export class VaultApiService {
     return this.http.get<Organisation[]>(`${this.base}/api/organisations${q}`);
   }
 
+  getOrganisation(organisationId: string): Observable<Organisation> {
+    return this.http.get<Organisation>(`${this.base}/api/organisations/${organisationId}`);
+  }
+
+  registerOrganisation(request: RegisterOrganisationRequest): Observable<Organisation> {
+    return this.http.post<Organisation>(`${this.base}/api/organisations`, request);
+  }
+
+  updateOrganisationProfile(organisationId: string, request: UpdateOrganisationProfileRequest): Observable<Organisation> {
+    return this.http.put<Organisation>(`${this.base}/api/organisations/${organisationId}/profile`, request);
+  }
+
+  updateOrganisationCompliance(organisationId: string, request: UpdateOrganisationComplianceRequest): Observable<Organisation> {
+    return this.http.put<Organisation>(`${this.base}/api/organisations/${organisationId}/compliance`, request);
+  }
+
+  /** The fixed set of system category names every vault seeds, for the per-category agreement step. */
+  getCategoryCatalog(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.base}/api/organisations/category-catalog`);
+  }
+
+  listCategoryAgreements(organisationId: string): Observable<CategoryAgreementView[]> {
+    return this.http.get<CategoryAgreementView[]>(`${this.base}/api/organisations/${organisationId}/agreements`);
+  }
+
+  setCategoryAgreement(organisationId: string, request: SetCategoryAgreementRequest): Observable<CategoryAgreementView> {
+    return this.http.put<CategoryAgreementView>(`${this.base}/api/organisations/${organisationId}/agreements`, request);
+  }
+
+  clearCategoryAgreement(organisationId: string, categoryName: string): Observable<CategoryAgreementView> {
+    return this.http.delete<CategoryAgreementView>(
+      `${this.base}/api/organisations/${organisationId}/agreements/${encodeURIComponent(categoryName)}`);
+  }
+
+  addPendingInvites(organisationId: string, emails: string[]): Observable<string[]> {
+    return this.http.post<string[]>(`${this.base}/api/organisations/${organisationId}/invites`, { emails });
+  }
+
   getAgreement(organisationId: string): Observable<Agreement> {
     return this.http.get<Agreement>(`${this.base}/api/organisations/${organisationId}/agreement`);
   }
@@ -177,6 +217,13 @@ export class VaultApiService {
 
   getOrganisationCategory(organisationId: string, userId: string, categoryId: string): Observable<CategoryView> {
     return this.http.get<CategoryView>(`${this.base}/v1/vault/${userId}/categories/${categoryId}`, {
+      headers: { 'X-Org-Id': organisationId },
+    });
+  }
+
+  /** Every share-code request this organisation has redeemed, whatever its current status. */
+  listOrganisationShareRequests(organisationId: string): Observable<OrganisationShareRequest[]> {
+    return this.http.get<OrganisationShareRequest[]>(`${this.base}/v1/share-requests`, {
       headers: { 'X-Org-Id': organisationId },
     });
   }

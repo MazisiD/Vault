@@ -263,6 +263,66 @@
   margin-top: 12px;
 }
 
+.org-list-item--expandable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.org-list-item--expandable:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.org-field-detail {
+  display: grid;
+  gap: 8px;
+  margin: -4px 0 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: none;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.org-field-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.org-field-detail-label {
+  color: rgba(233, 233, 237, 0.6);
+}
+
+.org-field-detail-value {
+  color: rgba(233, 233, 237, 0.92);
+  text-align: right;
+  word-break: break-word;
+}
+
+.tag-status-approved {
+  color: #7fc094;
+  border: 1px solid rgba(127, 192, 148, 0.4);
+}
+
+.tag-status-awaitingapproval {
+  color: #e0c26b;
+  border: 1px solid rgba(224, 194, 107, 0.4);
+}
+
+.tag-status-rejected,
+.tag-status-revoked {
+  color: #e28080;
+  border: 1px solid rgba(226, 128, 128, 0.4);
+}
+
+.tag-status-expired {
+  color: rgba(233, 233, 237, 0.6);
+  border: 1px solid rgba(233, 233, 237, 0.2);
+}
+
 @media (max-width: 900px) {
   .org-grid,
   .agreement-body,

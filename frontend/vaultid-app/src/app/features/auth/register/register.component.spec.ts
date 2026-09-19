@@ -25,17 +25,14 @@ describe('RegisterComponent', () => {
     fixture.detectChanges();
   });
 
-  it('shows both account type choices', () => {
+  it('shows the individual sign-up form', () => {
     const text = fixture.nativeElement.textContent;
-    expect(text).toContain('Register as an individual');
-    expect(text).toContain('Register as an organisation or company');
+    expect(text).toContain('Full name');
+    expect(text).toContain('Username');
   });
 
-  it('switches to the organisation form when selected', () => {
-    const buttons = fixture.nativeElement.querySelectorAll('button[type="button"]');
-    buttons[1].click();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.textContent).toContain('Organisation or company name');
+  it('links out to organisation registration', () => {
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('a[routerLink="/register/organisation"]');
+    expect(link).toBeTruthy();
   });
 });

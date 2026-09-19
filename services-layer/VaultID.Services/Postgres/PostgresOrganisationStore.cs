@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Npgsql;
 using VaultID.Services.Abstractions;
 using VaultID.Services.Persistence;
@@ -14,6 +15,8 @@ public sealed class PostgresOrganisationStore(NpgsqlDataSource dataSource) : IOr
     private const string SelectColumns = """
         id, name, status, agreement_id, agreement_purpose, agreement_retention_days,
         agreement_legal_basis, agreement_third_party_sharing, agreement_deletion_commitment,
+        registration_number, address, industry, contact_name, contact_phone, contact_email,
+        category_agreements, pending_invites,
         registered_at, updated_at
         """;
 
@@ -59,10 +62,14 @@ public sealed class PostgresOrganisationStore(NpgsqlDataSource dataSource) : IOr
             insert into public.organisations
                 (id, name, status, agreement_id, agreement_purpose, agreement_retention_days,
                  agreement_legal_basis, agreement_third_party_sharing, agreement_deletion_commitment,
+                 registration_number, address, industry, contact_name, contact_phone, contact_email,
+                 category_agreements, pending_invites,
                  registered_at, updated_at)
             values
                 (@id, @name, @status, @agreementId, @agreementPurpose, @agreementRetentionDays,
                  @agreementLegalBasis, @agreementThirdPartySharing, @agreementDeletionCommitment,
+                 @registrationNumber, @address, @industry, @contactName, @contactPhone, @contactEmail,
+                 @categoryAgreements::jsonb, @pendingInvites::jsonb,
                  @registeredAt, @updatedAt)
             on conflict (id) do update set
                 name = excluded.name,
@@ -73,6 +80,14 @@ public sealed class PostgresOrganisationStore(NpgsqlDataSource dataSource) : IOr
                 agreement_legal_basis = excluded.agreement_legal_basis,
                 agreement_third_party_sharing = excluded.agreement_third_party_sharing,
                 agreement_deletion_commitment = excluded.agreement_deletion_commitment,
+                registration_number = excluded.registration_number,
+                address = excluded.address,
+                industry = excluded.industry,
+                contact_name = excluded.contact_name,
+                contact_phone = excluded.contact_phone,
+                contact_email = excluded.contact_email,
+                category_agreements = excluded.category_agreements,
+                pending_invites = excluded.pending_invites,
                 updated_at = excluded.updated_at;
             """;
         command.Parameters.AddWithValue("id", record.Id);
@@ -84,6 +99,14 @@ public sealed class PostgresOrganisationStore(NpgsqlDataSource dataSource) : IOr
         command.Parameters.AddWithValue("agreementLegalBasis", (object?)record.AgreementLegalBasis ?? DBNull.Value);
         command.Parameters.AddWithValue("agreementThirdPartySharing", (object?)record.AgreementThirdPartySharing ?? DBNull.Value);
         command.Parameters.AddWithValue("agreementDeletionCommitment", (object?)record.AgreementDeletionCommitment ?? DBNull.Value);
+        command.Parameters.AddWithValue("registrationNumber", (object?)record.RegistrationNumber ?? DBNull.Value);
+        command.Parameters.AddWithValue("address", (object?)record.Address ?? DBNull.Value);
+        command.Parameters.AddWithValue("industry", (object?)record.Industry ?? DBNull.Value);
+        command.Parameters.AddWithValue("contactName", (object?)record.ContactName ?? DBNull.Value);
+        command.Parameters.AddWithValue("contactPhone", (object?)record.ContactPhone ?? DBNull.Value);
+        command.Parameters.AddWithValue("contactEmail", (object?)record.ContactEmail ?? DBNull.Value);
+        command.Parameters.AddWithValue("categoryAgreements", JsonSerializer.Serialize(record.CategoryAgreements));
+        command.Parameters.AddWithValue("pendingInvites", JsonSerializer.Serialize(record.PendingInvites));
         command.Parameters.AddWithValue("registeredAt", record.RegisteredAt);
         command.Parameters.AddWithValue("updatedAt", record.UpdatedAt);
 
@@ -101,7 +124,20 @@ public sealed class PostgresOrganisationStore(NpgsqlDataSource dataSource) : IOr
         AgreementLegalBasis = reader.IsDBNull(6) ? null : reader.GetString(6),
         AgreementThirdPartySharing = reader.IsDBNull(7) ? null : reader.GetString(7),
         AgreementDeletionCommitment = reader.IsDBNull(8) ? null : reader.GetString(8),
-        RegisteredAt = reader.GetFieldValue<DateTimeOffset>(9),
-        UpdatedAt = reader.GetFieldValue<DateTimeOffset>(10),
+        RegistrationNumber = reader.IsDBNull(9) ? null : reader.GetString(9),
+        Address = reader.IsDBNull(10) ? null : reader.GetString(10),
+        Industry = reader.IsDBNull(11) ? null : reader.GetString(11),
+        ContactName = reader.IsDBNull(12) ? null : reader.GetString(12),
+        ContactPhone = reader.IsDBNull(13) ? null : reader.GetString(13),
+        ContactEmail = reader.IsDBNull(14) ? null : reader.GetString(14),
+        CategoryAgreements = reader.IsDBNull(15)
+            ? new Dictionary<string, CategoryAgreementRecord>(StringComparer.OrdinalIgnoreCase)
+            : JsonSerializer.Deserialize<Dictionary<string, CategoryAgreementRecord>>(reader.GetString(15))
+                ?? new Dictionary<string, CategoryAgreementRecord>(StringComparer.OrdinalIgnoreCase),
+        PendingInvites = reader.IsDBNull(16)
+            ? []
+            : JsonSerializer.Deserialize<List<string>>(reader.GetString(16)) ?? [],
+        RegisteredAt = reader.GetFieldValue<DateTimeOffset>(17),
+        UpdatedAt = reader.GetFieldValue<DateTimeOffset>(18),
     };
 }

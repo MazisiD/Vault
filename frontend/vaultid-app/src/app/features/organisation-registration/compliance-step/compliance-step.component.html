@@ -1,0 +1,36 @@
+<div class="card elev-sm org-reg-step-card">
+  <h3>Data handling & compliance</h3>
+  <p class="text-muted">
+    This becomes your organisation's default data processing agreement (POPIA s14), shown to users before they
+    share. Required to finish registering.
+  </p>
+
+  @if (error()) {
+    <div class="vid-notice vid-notice--error">{{ error() }}</div>
+  }
+
+  <form (ngSubmit)="submit()" class="org-reg-form">
+    <div class="field">
+      <label for="retentionDays">Retention period (days)</label>
+      <input class="input" id="retentionDays" name="retentionDays" type="number" min="1" [(ngModel)]="retentionDays" required />
+    </div>
+    <div class="field">
+      <label for="legalBasis">Legal basis for processing</label>
+      <input class="input" id="legalBasis" name="legalBasis" [(ngModel)]="legalBasis" required placeholder="Contractual obligation" />
+    </div>
+    <div class="field">
+      <label for="thirdPartySharing">Third-party sharing (optional)</label>
+      <input class="input" id="thirdPartySharing" name="thirdPartySharing" [(ngModel)]="thirdPartySharing" placeholder="e.g. Credit bureaus for affordability checks" />
+    </div>
+    <div class="field">
+      <label for="deletionCommitment">Deletion commitment (optional)</label>
+      <input class="input" id="deletionCommitment" name="deletionCommitment" [(ngModel)]="deletionCommitment" placeholder="e.g. Cached data deleted within 30 days" />
+    </div>
+
+    <div class="org-reg-actions">
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Registering…' : 'Register organisation' }}
+      </button>
+    </div>
+  </form>
+</div>

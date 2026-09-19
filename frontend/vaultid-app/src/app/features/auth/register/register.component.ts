@@ -3,6 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 
+/**
+ * Individual sign-up. Registering an organisation is a separate, multi-step
+ * flow (see features/organisation-registration) since it needs an admin
+ * account, an organisation profile, and compliance/agreement setup rather
+ * than a single form.
+ */
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -14,32 +20,25 @@ export class RegisterComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  accountType: 'individual' | 'organisation' = 'individual';
   username = '';
   fullName = '';
-  organisationName = '';
   email = '';
   password = '';
   readonly submitting = signal(false);
   readonly error = signal('');
   readonly message = signal('');
 
-  get selectedAccountLabel(): string {
-    return this.accountType === 'organisation' ? 'Organisation or company' : 'Individual';
-  }
-
   async submit(): Promise<void> {
     this.error.set('');
     this.message.set('');
     this.submitting.set(true);
     try {
-      const displayName = this.accountType === 'organisation' ? this.organisationName.trim() : this.fullName.trim();
       const result = await this.auth.register(
         this.username.trim(),
         this.email.trim(),
         this.password,
-        this.accountType,
-        displayName,
+        'individual',
+        this.fullName.trim(),
       );
       if (!result.ok) {
         this.error.set(result.error ?? 'Registration failed.');

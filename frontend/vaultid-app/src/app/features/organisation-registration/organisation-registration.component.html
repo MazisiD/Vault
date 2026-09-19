@@ -1,0 +1,36 @@
+<div class="org-reg-shell">
+  <aside class="org-reg-sidebar card elev-sm">
+    <h4 class="org-reg-sidebar-title">Register your organisation</h4>
+    <ol class="org-reg-steps">
+      @for (step of state.steps; track step.key; let i = $index) {
+        <li
+          class="org-reg-step"
+          [class.org-reg-step--active]="i === state.stepIndex()"
+          [class.org-reg-step--done]="i < state.stepIndex()">
+          <span class="org-reg-step-index">{{ i < state.stepIndex() ? '✓' : i + 1 }}</span>
+          <span class="org-reg-step-label">{{ step.label }}</span>
+        </li>
+      }
+    </ol>
+  </aside>
+
+  <div class="org-reg-content">
+    @switch (state.steps[state.stepIndex()].key) {
+      @case ('admin-account') {
+        <app-admin-account-step />
+      }
+      @case ('profile') {
+        <app-org-profile-step />
+      }
+      @case ('compliance') {
+        <app-compliance-step />
+      }
+      @case ('category-agreements') {
+        <app-category-agreements-step />
+      }
+      @case ('invite-team') {
+        <app-invite-team-step />
+      }
+    }
+  </div>
+</div>

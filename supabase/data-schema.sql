@@ -73,6 +73,18 @@ create table if not exists public.organisations (
   agreement_legal_basis          text,
   agreement_third_party_sharing  text,
   agreement_deletion_commitment  text,
+  registration_number            text,
+  address                        text,
+  industry                       text,
+  contact_name                   text,
+  contact_phone                  text,
+  contact_email                  text,
+  -- Per-category agreement overrides, keyed by category name (categories are
+  -- per-vault entities with no shared id across users, so name is the key);
+  -- a category absent here falls back to the agreement_* default above.
+  category_agreements            jsonb not null default '{}'::jsonb,
+  -- Emails invited as additional org admins/operators, not yet linked to an account.
+  pending_invites                jsonb not null default '[]'::jsonb,
   registered_at                  timestamptz not null default now(),
   updated_at                     timestamptz not null default now()
 );

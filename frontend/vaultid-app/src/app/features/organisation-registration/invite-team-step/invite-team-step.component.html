@@ -1,0 +1,25 @@
+<div class="card elev-sm org-reg-step-card">
+  <h3>Invite your team</h3>
+  <p class="text-muted">
+    Optional. Add colleague emails who should also manage this organisation - one per line or comma-separated.
+    We'll only note them for now; sending invites comes later.
+  </p>
+
+  @if (error()) {
+    <div class="vid-notice vid-notice--error">{{ error() }}</div>
+  }
+
+  <form (ngSubmit)="finish()" class="org-reg-form">
+    <div class="field">
+      <label for="emails">Colleague emails</label>
+      <textarea class="input" id="emails" name="emails" rows="4" [(ngModel)]="emailsText" placeholder="alex@acme.com&#10;sam@acme.com"></textarea>
+    </div>
+
+    <div class="org-reg-actions">
+      <button class="btn btn-secondary" type="button" (click)="skip()" [disabled]="submitting()">Skip for now</button>
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Finishing…' : 'Finish setup' }}
+      </button>
+    </div>
+  </form>
+</div>

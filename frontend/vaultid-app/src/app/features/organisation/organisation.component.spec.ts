@@ -13,7 +13,9 @@ describe('OrganisationComponent', () => {
       'redeemShareCode',
       'listOrganisationGrants',
       'getOrganisationCategory',
+      'listOrganisationShareRequests',
     ]);
+    api.listOrganisationShareRequests.and.returnValue(of([]));
 
     api.searchOrganisations.and.returnValue(of([
       {
@@ -88,8 +90,8 @@ describe('OrganisationComponent', () => {
 
     api.listOrganisationGrants.and.returnValues(
       of([]),
-      of([{ grantId: 'grant-1', userId: 'user-123', organisationId: 'org-fnb', organisationName: 'FNB Bank', categoryId: 'cat-1', scope: 'ReadOnly', duration: 'Custom', agreementId: 'agreement-1', expiresAt: '2026-10-10T00:00:00Z', status: 'Active', consentedAt: '2026-09-10T00:00:00Z', fieldDefinitionIds: ['field-1'] }]),
-      of([{ grantId: 'grant-1', userId: 'user-123', organisationId: 'org-fnb', organisationName: 'FNB Bank', categoryId: 'cat-1', scope: 'ReadOnly', duration: 'Custom', agreementId: 'agreement-1', expiresAt: '2026-10-10T00:00:00Z', status: 'Active', consentedAt: '2026-09-10T00:00:00Z', fieldDefinitionIds: ['field-1'] }]),
+      of([{ grantId: 'grant-1', userId: 'user-123', userDisplayName: 'Jordan Ellis', organisationId: 'org-fnb', organisationName: 'FNB Bank', categoryId: 'cat-1', scope: 'ReadOnly', duration: 'Custom', agreementId: 'agreement-1', expiresAt: '2026-10-10T00:00:00Z', status: 'Active', consentedAt: '2026-09-10T00:00:00Z', fieldDefinitionIds: ['field-1'] }]),
+      of([{ grantId: 'grant-1', userId: 'user-123', userDisplayName: 'Jordan Ellis', organisationId: 'org-fnb', organisationName: 'FNB Bank', categoryId: 'cat-1', scope: 'ReadOnly', duration: 'Custom', agreementId: 'agreement-1', expiresAt: '2026-10-10T00:00:00Z', status: 'Active', consentedAt: '2026-09-10T00:00:00Z', fieldDefinitionIds: ['field-1'] }]),
     );
 
     const input = fixture.nativeElement.querySelector('input[placeholder="Enter share code"]') as HTMLInputElement;

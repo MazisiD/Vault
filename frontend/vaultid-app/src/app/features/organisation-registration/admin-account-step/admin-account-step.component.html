@@ -1,0 +1,29 @@
+<div class="card elev-sm org-reg-step-card">
+  <h3>Create your admin account</h3>
+  <p class="text-muted">This is your own sign-in for managing the organisation - not a personal vault.</p>
+
+  @if (error()) {
+    <div class="vid-notice vid-notice--error">{{ error() }}</div>
+  }
+
+  <form (ngSubmit)="submit()" class="org-reg-form">
+    <div class="field">
+      <label for="adminName">Your full name</label>
+      <input class="input" id="adminName" name="adminName" [(ngModel)]="adminName" required autocomplete="name" placeholder="Jordan Ellis" />
+    </div>
+    <div class="field">
+      <label for="email">Work email</label>
+      <input class="input" id="email" name="email" type="email" [(ngModel)]="email" required autocomplete="email" placeholder="jordan@acme.com" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input class="input" id="password" name="password" type="password" [(ngModel)]="password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters" />
+    </div>
+
+    <div class="org-reg-actions">
+      <button class="btn btn-primary" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Creating account…' : 'Continue' }}
+      </button>
+    </div>
+  </form>
+</div>
