@@ -1,0 +1,136 @@
+<div class="vid-screen-head">
+  <div>
+    <h3>Organisation access</h3>
+    <p class="text-muted">Redeem a user-generated share code and review the live data the owner approves to share.</p>
+  </div>
+  <div class="org-header-actions">
+    <span class="tag tag-outline">{{ approvedRecords().length }} approved</span>
+    <span class="tag tag-neutral">{{ isAwaitingApproval() ? 1 : 0 }} pending</span>
+  </div>
+</div>
+
+@if (statusMessage()) {
+  <div class="vid-notice"><i class="ph ph-check-circle"></i>{{ statusMessage() }}</div>
+}
+
+<div class="org-grid">
+  <section class="card elev-sm org-panel">
+    <div class="panel-header">
+      <div>
+        <span class="eyebrow">Share code</span>
+        <h4>Redeem access request</h4>
+      </div>
+      <i class="ph ph-key org-panel-icon"></i>
+    </div>
+
+    <div class="field">
+      <label for="share-code">Share code</label>
+      <div class="org-code-input">
+        <input
+          id="share-code"
+          class="input"
+          type="text"
+          [(ngModel)]="shareCode"
+          (ngModelChange)="error.set('')"
+          placeholder="Enter share code"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <button class="btn btn-primary" data-testid="use-code-btn" [disabled]="loading()" (click)="lookupShareCode()">
+          {{ loading() ? 'Checking…' : 'Use code' }}
+        </button>
+      </div>
+    </div>
+
+    @if (error()) {
+      <div class="vid-notice vid-notice--danger"><i class="ph ph-warning-circle"></i>{{ error() }}</div>
+    }
+  </section>
+
+  <section class="card elev-sm org-panel">
+    <div class="panel-header">
+      <div>
+        <span class="eyebrow">Queue</span>
+        <h4>Approval status</h4>
+      </div>
+      <i class="ph ph-clipboard-text org-panel-icon"></i>
+    </div>
+
+    <div class="org-metrics">
+      <div class="metric">
+        <span class="metric-label">Awaiting user approval</span>
+        <strong>{{ isAwaitingApproval() ? 1 : 0 }}</strong>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Approved records</span>
+        <strong>{{ approvedRecords().length }}</strong>
+      </div>
+      <div class="metric">
+        <span class="metric-label">Organisation</span>
+        <strong>{{ selectedOrganisationName() || 'Your organisation' }}</strong>
+      </div>
+    </div>
+  </section>
+</div>
+
+@if (redemption(); as result) {
+  <section class="card elev-md org-agreement">
+    <div class="agreement-head">
+      <div>
+        <span class="eyebrow">Access request</span>
+        <h4>{{ selectedOrganisationName() || 'Organisation' }}</h4>
+      </div>
+      <span class="tag tag-outline">{{ result.status }}</span>
+    </div>
+
+    <div class="person-summary">
+      <div>
+        <span class="summary-label">User ID</span>
+        <strong>{{ result.userId }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Field count</span>
+        <strong>{{ result.fieldCount }}</strong>
+      </div>
+      <div>
+        <span class="summary-label">Access expiry</span>
+        <strong>{{ result.accessExpiresAt | date: 'medium' }}</strong>
+      </div>
+    </div>
+  </section>
+}
+
+<section class="card elev-sm org-section">
+  <div class="section-head">
+    <div>
+      <span class="eyebrow">Approved</span>
+      <h4>Live shared data</h4>
+    </div>
+  </div>
+
+  @if (approvedRecords().length) {
+    <div class="org-list org-list--approved">
+      @for (row of approvedRecords(); track row.categoryId) {
+        <div class="org-list-item org-list-item--approved">
+          <div class="org-list-main">
+            <div class="avatar avatar--approved">{{ (row.displayName || row.userId || 'U').charAt(0) }}</div>
+            <div>
+              <h5>{{ row.displayName || row.userId || 'User' }}</h5>
+              <p>{{ row.fields[0].value || 'No data returned' }}</p>
+            </div>
+          </div>
+          <div class="org-list-meta">
+            <span class="tag tag-outline">Approved</span>
+            <span class="muted">{{ row.fields.length }} field values</span>
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="vid-empty org-empty">
+      <i class="ph ph-folder-open"></i>
+      <h4>No live data yet</h4>
+      <p>Once the owner approves the request, the shared values will appear here.</p>
+    </div>
+  }
+</section>

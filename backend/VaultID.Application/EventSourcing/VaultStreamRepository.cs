@@ -45,7 +45,18 @@ public sealed class VaultStreamRepository(IEventStore eventStore, EventSerialize
             return;
         }
 
-        var stored = events.Select(_serializer.Serialize);
-        await _eventStore.AppendAsync(userId, expectedVersion, stored, ct);
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                var stored = events.Select(_serializer.Serialize);
+                await _eventStore.AppendAsync(userId, expectedVersion, stored, ct);
+                return;
+            }
+            catch (ConcurrencyException) when (attempt < 2)
+            {
+                expectedVersion = await _eventStore.GetStreamVersionAsync(userId, ct);
+            }
+        }
     }
 }

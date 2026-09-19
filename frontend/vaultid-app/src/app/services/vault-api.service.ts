@@ -5,7 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   ActivityEntry, Agreement, Category, CategoryView, ConsentMethod, FieldDefinition, FieldType,
   GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, PendingShareRequest,
-  ShareCode, ShareDuration, ShareRequest, UpdateCategoryFieldsRequest, VaultSummary,
+  ShareCode, ShareCodeRedemptionView, ShareDuration, ShareRequest, UpdateCategoryFieldsRequest, VaultSummary,
 } from '../models';
 
 /**
@@ -159,5 +159,25 @@ export class VaultApiService {
 
   getAgreement(organisationId: string): Observable<Agreement> {
     return this.http.get<Agreement>(`${this.base}/api/organisations/${organisationId}/agreement`);
+  }
+
+  redeemShareCode(organisationId: string, code: string): Observable<ShareCodeRedemptionView> {
+    return this.http.post<ShareCodeRedemptionView>(
+      `${this.base}/v1/share-codes/redeem`,
+      { code },
+      { headers: { 'X-Org-Id': organisationId } },
+    );
+  }
+
+  listOrganisationGrants(organisationId: string): Observable<Grant[]> {
+    return this.http.get<Grant[]>(`${this.base}/v1/grants`, {
+      headers: { 'X-Org-Id': organisationId },
+    });
+  }
+
+  getOrganisationCategory(organisationId: string, userId: string, categoryId: string): Observable<CategoryView> {
+    return this.http.get<CategoryView>(`${this.base}/v1/vault/${userId}/categories/${categoryId}`, {
+      headers: { 'X-Org-Id': organisationId },
+    });
   }
 }

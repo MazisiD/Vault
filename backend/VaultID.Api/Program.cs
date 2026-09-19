@@ -31,10 +31,12 @@ builder.Services.AddOpenApi(options =>
 
 // Wire the entire backend (Application -> Services). The Api never registers
 // data-access or business services directly; it delegates to the composition
-// root of the Application layer. Falls back to the in-memory stores if no
-// Postgres connection string is configured, so local dev/tests work without
-// a real database.
-var postgresConnectionString = builder.Configuration["Supabase:ConnectionString"];
+// root of the Application layer. Prefer real Postgres when a connection string
+// is configured, and fall back to the in-memory stores for local/dev work.
+var postgresConnectionString = builder.Configuration["Supabase:ConnectionString"]
+    ?? builder.Configuration.GetConnectionString("Supabase")
+    ?? Environment.GetEnvironmentVariable("SUPABASE_CONNECTION_STRING");
+
 if (!string.IsNullOrWhiteSpace(postgresConnectionString))
 {
     builder.Services.AddVaultIdApplication(postgresConnectionString);

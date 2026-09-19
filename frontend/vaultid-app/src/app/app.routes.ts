@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'vault' },
+  { path: '', pathMatch: 'full', redirectTo: 'login' },
   {
     path: 'login',
     loadComponent: () => import('./features/auth/login/login.component').then((m) => m.LoginComponent),
@@ -38,9 +38,14 @@ export const routes: Routes = [
     loadComponent: () => import('./features/sharing/sharing.component').then((m) => m.SharingComponent),
   },
   {
+    path: 'organisation',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/organisation/organisation.component').then((m) => m.OrganisationComponent),
+  },
+  {
     path: 'activity',
     canActivate: [authGuard],
     loadComponent: () => import('./features/activity/activity.component').then((m) => m.ActivityComponent),
   },
-  { path: '**', redirectTo: 'vault' },
+  { path: '**', redirectTo: 'login' },
 ];

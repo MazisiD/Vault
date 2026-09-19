@@ -74,6 +74,7 @@ public sealed class SharingService(
 
         return new GrantView(
             grantId,
+            userId,
             request.OrganisationId,
             org.Name,
             request.CategoryId,
@@ -275,6 +276,7 @@ public sealed class SharingService(
 
         return new GrantView(
             grant.Id,
+            grant.GrantorUserId,
             grant.GranteeOrganisationId,
             orgName,
             grant.CategoryId,

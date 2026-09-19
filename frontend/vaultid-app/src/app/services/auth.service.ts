@@ -48,6 +48,15 @@ export class AuthService {
     return (meta?.['username'] as string | undefined) ?? this.user()?.email ?? '';
   }
 
+  get accountType(): 'individual' | 'organisation' {
+    const meta = this.user()?.user_metadata as Record<string, unknown> | undefined;
+    return (meta?.['account_type'] as string | undefined) === 'organisation' ? 'organisation' : 'individual';
+  }
+
+  get isOrganisation(): boolean {
+    return this.accountType === 'organisation';
+  }
+
   private setSession(session: Session | null): void {
     this.session.set(session);
     this.user.set(session?.user ?? null);

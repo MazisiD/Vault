@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using VaultID.Services.Abstractions;
@@ -36,14 +37,44 @@ public static class ServiceLayerExtensions
     }
 
     /// <summary>
+    /// Chooses the real Postgres-backed layer when a connection string is present,
+    /// otherwise falls back to the in-memory stores used for local development.
+    /// </summary>
+    public static IServiceCollection AddVaultIdServices(this IServiceCollection services, string? connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return services.AddVaultIdServices();
+        }
+
+        return services.AddVaultIdPostgresServices(connectionString);
+    }
+
+    /// <summary>
+    /// Reads the service-layer configuration from the application's configuration
+    /// and picks the correct store implementation automatically.
+    /// </summary>
+    public static IServiceCollection AddVaultIdServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["Supabase:ConnectionString"]
+            ?? configuration.GetConnectionString("Supabase")
+            ?? Environment.GetEnvironmentVariable("SUPABASE_CONNECTION_STRING");
+
+        return services.AddVaultIdServices(connectionString);
+    }
+
+    /// <summary>
     /// Registers the VaultID data-access layer against a real Postgres
     /// database (a Supabase project's "Direct connection string", found under
     /// Settings → Database) using the tables in supabase/data-schema.sql.
-    /// Use this instead of <see cref="AddVaultIdServices"/> for real persistence.
+    /// Use this instead of <see cref="AddVaultIdServices(IServiceCollection, string?)"/> for real persistence.
     /// </summary>
     public static IServiceCollection AddVaultIdPostgresServices(this IServiceCollection services, string connectionString)
     {
-        services.AddSingleton(NpgsqlDataSource.Create(connectionString));
+        var dataSource = NpgsqlDataSource.Create(connectionString);
+        PostgresShareCodeIndexStore.EnsureSchemaExists(dataSource);
+
+        services.AddSingleton(dataSource);
         services.AddSingleton<IEventStore, PostgresEventStore>();
         services.AddSingleton<IOrganisationStore, PostgresOrganisationStore>();
         services.AddSingleton<IWebhookSubscriptionStore, PostgresWebhookSubscriptionStore>();

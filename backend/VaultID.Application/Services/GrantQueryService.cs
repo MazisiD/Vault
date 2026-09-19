@@ -41,7 +41,7 @@ public sealed class GrantQueryService(
             {
                 case CategoryShared cs when cs.OrganisationId == organisationId:
                     grants[cs.GrantId] = new ProjectedGrant(
-                        cs.GrantId, cs.OrganisationId, cs.CategoryId, cs.Scope,
+                        cs.GrantId, cs.VaultId, cs.OrganisationId, cs.CategoryId, cs.Scope,
                         cs.Duration, cs.AgreementId, cs.ExpiresAt, GrantStatus.Active, cs.OccurredAt,
                         cs.FieldDefinitionIds);
                     break;
@@ -66,7 +66,7 @@ public sealed class GrantQueryService(
             .Where(g => g.Status == GrantStatus.Active && (g.ExpiresAt is null || g.ExpiresAt > now))
             .OrderByDescending(g => g.ConsentedAt)
             .Select(g => new GrantView(
-                g.GrantId, g.OrganisationId, orgName, g.CategoryId, g.Scope,
+                g.GrantId, g.UserId, g.OrganisationId, orgName, g.CategoryId, g.Scope,
                 g.Duration, g.AgreementId, g.ExpiresAt, g.Status, g.ConsentedAt,
                 g.FieldDefinitionIds))
             .ToList();
@@ -86,6 +86,7 @@ public sealed class GrantQueryService(
 
     private sealed record ProjectedGrant(
         Guid GrantId,
+        string UserId,
         string OrganisationId,
         Guid CategoryId,
         AccessScope Scope,

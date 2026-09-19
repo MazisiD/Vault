@@ -11,8 +11,13 @@
 <div class="app-shell">
   @if (auth.user()) {
     <nav class="sidebar">
-      <a routerLink="/vault" routerLinkActive="active"><i class="ph ph-vault"></i>My Vault</a>
-      <a routerLink="/share" routerLinkActive="active"><i class="ph ph-share-network"></i>Sharing</a>
+      @if (!isOrganisation) {
+        <a routerLink="/vault" routerLinkActive="active"><i class="ph ph-vault"></i>My Vault</a>
+        <a routerLink="/share" routerLinkActive="active"><i class="ph ph-share-network"></i>Sharing</a>
+      }
+      @if (isOrganisation) {
+        <a routerLink="/organisation" routerLinkActive="active"><i class="ph ph-building-office"></i>Organisation</a>
+      }
       <a routerLink="/activity" routerLinkActive="active"><i class="ph ph-clock-counter-clockwise"></i>Activity</a>
     </nav>
   }

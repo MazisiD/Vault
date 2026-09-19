@@ -151,6 +151,7 @@ export interface Organisation {
 
 export interface Grant {
   grantId: string;
+  userId: string;
   organisationId: string;
   organisationName: string;
   categoryId: string;
@@ -195,6 +196,15 @@ export interface GeneratedShareCode {
   organisationId: string;
   organisationName: string;
   codeExpiresAt: string;
+  accessExpiresAt: string;
+}
+
+/** What an organisation learns by redeeming a share code: the user and queued request state. */
+export interface ShareCodeRedemptionView {
+  shareCodeId: string;
+  userId: string;
+  status: ShareCodeStatus;
+  fieldCount: number;
   accessExpiresAt: string;
 }
 

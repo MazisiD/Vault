@@ -13,6 +13,27 @@ public sealed class PostgresShareCodeIndexStore(NpgsqlDataSource dataSource) : I
 {
     private const string SelectColumns = "code_hash, user_id, share_code_id, organisation_id, expires_at, created_at";
 
+    public static void EnsureSchemaExists(NpgsqlDataSource dataSource)
+    {
+        using var connection = dataSource.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            create table if not exists public.share_code_index (
+              code_hash       text primary key,
+              user_id         uuid not null references auth.users (id) on delete cascade,
+              share_code_id   uuid not null,
+              organisation_id text not null references public.organisations (id) on delete cascade,
+              expires_at      timestamptz not null,
+              created_at      timestamptz not null default now()
+            );
+
+            create index if not exists share_code_index_expires_idx on public.share_code_index (expires_at);
+            alter table public.share_code_index enable row level security;
+            """;
+
+        command.ExecuteNonQuery();
+    }
+
     public async Task AddAsync(ShareCodeIndexRecord record, CancellationToken cancellationToken = default)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);

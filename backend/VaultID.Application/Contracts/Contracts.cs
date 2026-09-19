@@ -80,6 +80,7 @@ public sealed record ShareRequest(
 
 public sealed record GrantView(
     Guid GrantId,
+    string UserId,
     string OrganisationId,
     string OrganisationName,
     Guid CategoryId,
