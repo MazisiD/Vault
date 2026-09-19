@@ -60,7 +60,18 @@ public sealed class VaultController(VaultService vaults, ActivityService activit
             .Select(v => new FieldValueUpdate(v.FieldDefinitionId, v.Value))
             .ToList();
 
-        return Ok(await _vaults.UpdateCategoryFieldsAsync(userId, new UpdateCategoryFieldsRequest(categoryId, values), ct));
+        var collections = (body.Collections ?? [])
+            .Select(c => new CollectionUpdate(
+                c.FieldDefinitionId,
+                c.Items
+                    .Select(i => new CollectionItemUpdate(
+                        i.ItemId,
+                        i.Values.Select(v => new FieldValueUpdate(v.FieldDefinitionId, v.Value)).ToList()))
+                    .ToList()))
+            .ToList();
+
+        var request = new UpdateCategoryFieldsRequest(categoryId, values, collections);
+        return Ok(await _vaults.UpdateCategoryFieldsAsync(userId, request, ct));
     }
 
     [HttpGet("{userId}/activity")]

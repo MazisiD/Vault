@@ -1,0 +1,63 @@
+/* Component-scoped styles for CollectionFieldComponent.
+   The shared vault classes it reuses (.vid-fieldbox, .vid-fieldhead,
+   .vid-typebadge, .vid-caret, .vid-iconbtn, .vid-addlink) live in the global
+   src/styles.css; only the repeated-item layout is scoped here. */
+
+/* The items of one collection, indented under their field the same way a
+   group's sub-fields are, so both kinds of container read alike. */
+.vid-collection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-left: var(--space-5);
+  padding: var(--space-3) 0 0 var(--space-4);
+  border-left: 2px solid var(--color-neutral-700);
+}
+
+/* One item - a bank account, a vehicle - as its own collapsible card. */
+.vid-collection-item {
+  border: 1px solid var(--color-neutral-700);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-text) 3%, transparent);
+  overflow: hidden;
+}
+
+.vid-collection-item__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-3);
+}
+
+.vid-collection-item__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+  border: none;
+  background: transparent;
+  color: var(--color-accent-200);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vid-collection-item__title:hover {
+  color: var(--color-accent-100);
+}
+
+.vid-collection-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.vid-collection-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-neutral-300);
+}

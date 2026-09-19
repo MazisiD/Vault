@@ -5,7 +5,7 @@ import { environment } from '../../environments/environment';
 import {
   ActivityEntry, Agreement, Category, CategoryView, ConsentMethod, FieldDefinition, FieldType,
   GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, PendingShareRequest,
-  ShareCode, ShareDuration, ShareRequest, VaultSummary,
+  ShareCode, ShareDuration, ShareRequest, UpdateCategoryFieldsRequest, VaultSummary,
 } from '../models';
 
 /**
@@ -38,17 +38,18 @@ export class VaultApiService {
   }
 
   /**
-   * Saves every edit made to one category in a single request. The backend
-   * validates the whole set before writing any of it and records one event per
-   * changed field; the response is the category's values as they now stand.
+   * Saves every edit made to one category in a single request, including the
+   * full contents of each collection the user touched. The backend validates
+   * the whole set before writing any of it and records one event per changed
+   * field; the response is the category's values as they now stand.
    */
   updateCategoryFields(
     userId: string,
     categoryId: string,
-    values: { fieldDefinitionId: string; value: string }[],
+    changes: UpdateCategoryFieldsRequest,
   ): Observable<CategoryView> {
     return this.http.put<CategoryView>(
-      `${this.base}/api/vaults/${userId}/categories/${categoryId}/fields`, { values });
+      `${this.base}/api/vaults/${userId}/categories/${categoryId}/fields`, changes);
   }
 
   getActivity(userId: string): Observable<ActivityEntry[]> {
@@ -78,6 +79,8 @@ export class VaultApiService {
       autocompleteToken?: string | null;
       choices?: string[] | null;
       parentFieldDefinitionId?: string | null;
+      isSecret?: boolean;
+      itemNoun?: string | null;
     },
   ): Observable<FieldDefinition> {
     return this.http.post<FieldDefinition>(`${this.base}/api/vaults/${userId}/categories/${categoryId}/fields`, {
@@ -86,6 +89,8 @@ export class VaultApiService {
       autocompleteToken: field.autocompleteToken ?? null,
       choices: field.choices ?? null,
       parentFieldDefinitionId: field.parentFieldDefinitionId ?? null,
+      isSecret: field.isSecret ?? false,
+      itemNoun: field.itemNoun ?? null,
     });
   }
 

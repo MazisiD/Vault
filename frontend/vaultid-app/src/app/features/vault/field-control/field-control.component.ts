@@ -17,11 +17,10 @@ export interface AddSubFieldEvent {
 }
 
 /**
- * Renders one field definition as a row of the vault's field list, matching
- * `New design/Manage Categories & Fields.dc.html`: a header line carrying the
- * field's name, a sub-field count badge, an expand caret, an "add sub-field"
- * button and a delete button; below it either the field's own control (a leaf)
- * or its indented sub-fields (a group).
+ * Renders one field definition as a row of the vault's field list: a header
+ * line carrying the field's name, a sub-field count badge when it is a group,
+ * an expand caret, and the reveal/copy/delete buttons; below it either the
+ * field's own control (a leaf) or its indented sub-fields (a group).
  *
  * The control itself is chosen by `fieldType` (dynamic-categories spec):
  * Text/LongText/Number/Date/Boolean/Choice get an editable control; File is a
@@ -29,7 +28,13 @@ export interface AddSubFieldEvent {
  * file storage); a Group renders no control of its own, only its children,
  * each rendered recursively by this same component with `nested` set (the
  * backend caps nesting at one level, so recursion never goes deeper than one
- * Group).
+ * Group). A Collection is rendered by `CollectionFieldComponent` instead,
+ * because its children repeat once per item rather than appearing once.
+ *
+ * A field the backend marks secret (an ID number, an account number) shows a
+ * masked value behind an eye toggle, so it can sit on screen without being
+ * readable over the owner's shoulder. Masking is presentation only - the value
+ * itself is whatever the backend returned.
  *
  * This component never saves. Editing a control emits `edited` and the row
  * marks itself unsaved; the whole category is committed in one request by the
@@ -60,6 +65,12 @@ export class FieldControlComponent implements OnDestroy {
   /** True when rendered as one of a Group's children: a compact single-row layout. */
   @Input() nested = false;
   /**
+   * False inside a collection item, where the rows come from the template every
+   * item shares: deleting one there would silently reshape every other item, so
+   * that edit belongs on the collection itself.
+   */
+  @Input() schemaEditable = true;
+  /**
    * Id of the field the user jumped to from the vault search. Setting it
    * expands this row when the target is this field or one of its sub-fields,
    * so a collapsed group can't hide the thing the user just searched for.
@@ -85,6 +96,8 @@ export class FieldControlComponent implements OnDestroy {
   /** Transient "Copied" acknowledgement on this row's copy button. */
   readonly copied = signal(false);
   private copiedTimer: ReturnType<typeof setTimeout> | null = null;
+  /** A secret field starts masked and is revealed only while the user asks for it. */
+  readonly revealed = signal(false);
 
   /**
    * A field reads as a group once it has children. The backend promotes a
@@ -131,6 +144,24 @@ export class FieldControlComponent implements OnDestroy {
 
   booleanValue(): boolean {
     return this.displayValue() === 'true';
+  }
+
+  /** A secret leaf shows dots until the owner reveals it; a group has no value of its own to hide. */
+  get isMasked(): boolean {
+    return !!this.field.isSecret && !this.isGroup && !this.revealed();
+  }
+
+  /** Dots standing in for all but the last four characters, which stay readable for checking. */
+  maskedValue(): string {
+    const value = this.displayValue();
+    if (!value) {
+      return '';
+    }
+    return value.length <= 4 ? '\u2022'.repeat(value.length) : '\u2022'.repeat(value.length - 4) + value.slice(-4);
+  }
+
+  get revealLabel(): string {
+    return `${this.revealed() ? 'Hide' : 'Show'} ${this.displayName}`;
   }
 
   /**

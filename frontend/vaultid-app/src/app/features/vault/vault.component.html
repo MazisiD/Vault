@@ -99,9 +99,17 @@
       </span>
       <span class="vid-field-card__actions">
         <span class="vid-badge">{{ fieldCountLabel(cat) }}</span>
-        <button class="vid-iconbtn" aria-label="Add field" (click)="startAddField()">
-          <i class="ph ph-plus"></i>
-        </button>
+        <span class="vid-viewswitch">
+          @for (mode of viewModes; track mode.id) {
+            <button class="vid-viewswitch__option"
+                    [class.vid-viewswitch__option--active]="viewMode() === mode.id"
+                    [attr.aria-label]="'View as ' + mode.label"
+                    [attr.aria-pressed]="viewMode() === mode.id"
+                    (click)="setViewMode(mode.id)">
+              <i class="ph" [class]="mode.icon"></i>{{ mode.label }}
+            </button>
+          }
+        </span>
         @if (!cat.isSystem) {
           <button class="vid-iconbtn" aria-label="Delete category" (click)="deleteCategory(cat)">
             <i class="ph ph-trash"></i>
@@ -110,40 +118,98 @@
       </span>
     </div>
 
-    <div class="vid-field-list">
-      @if (addingField()) {
-        <div class="vid-inline-add">
-          <input class="input" type="text" placeholder="Field name"
-                 [(ngModel)]="newFieldName"
-                 (keyup.enter)="confirmAddField(cat)"
-                 (keyup.escape)="cancelAddField()" />
-          <button class="btn btn-primary" [disabled]="!newFieldName.trim()" (click)="confirmAddField(cat)">Add</button>
-          <button class="btn btn-ghost" (click)="cancelAddField()">Cancel</button>
+    @if (viewMode() === 'form') {
+      <div class="vid-field-list">
+        @if (addingField()) {
+          <div class="vid-inline-add">
+            <input class="input" type="text" placeholder="Field name"
+                   [(ngModel)]="newFieldName"
+                   (keyup.enter)="confirmAddField(cat)"
+                   (keyup.escape)="cancelAddField()" />
+            <button class="btn btn-primary" [disabled]="!newFieldName.trim()" (click)="confirmAddField(cat)">Add</button>
+            <button class="btn btn-ghost" (click)="cancelAddField()">Cancel</button>
+          </div>
+        }
+
+        @for (field of cat.fields; track field.id) {
+          @if (isCollection(field)) {
+            <app-collection-field
+              [field]="field"
+              [items]="itemsOf(field.id)"
+              [storedItems]="storedItemsOf(field.id)"
+              [highlightId]="highlighted()"
+              (valueChanged)="onCollectionValue($event)"
+              (itemAdded)="addCollectionItem($event)"
+              (itemDuplicated)="duplicateCollectionItem($event)"
+              (itemRemoved)="removeCollectionItem($event)"
+              (removed)="removeField(cat, $event)"
+            />
+          } @else {
+            <app-field-control
+              [field]="field"
+              [values]="values()"
+              [edits]="edits()"
+              [highlightId]="highlighted()"
+              (edited)="onEdit($event)"
+              (removed)="removeField(cat, $event)"
+              (addSubField)="addSubField(cat, $event)"
+            />
+          }
+        }
+
+        @if (cat.fields.length && !addingField()) {
+          <button class="vid-addlink" (click)="startAddField()">
+            <i class="ph ph-plus"></i>Add field
+          </button>
+        }
+
+        @if (!cat.fields.length && !addingField()) {
+          <div class="vid-empty" style="border:none; padding:var(--space-6);">
+            <i class="ph ph-vault"></i>
+            <h4>No {{ meta(cat).label }} fields yet</h4>
+            <p>Nothing is shared until you explicitly grant access.</p>
+            <button class="vid-addlink" (click)="startAddField()">
+              <i class="ph ph-plus"></i>Add your first field
+            </button>
+          </div>
+        }
+      </div>
+    } @else if (viewMode() === 'cards') {
+      <div class="vid-field-list">
+        <div class="vid-cardgrid">
+          @for (row of readRows(); track row.key) {
+            <div class="vid-datacard">
+              <span class="vid-datacard__label">{{ row.label }}</span>
+              <span class="vid-datacard__value" [class.vid-datacard__value--empty]="!row.value">
+                {{ readValue(row) }}
+              </span>
+            </div>
+          } @empty {
+            <p class="vid-datatable__empty">No {{ meta(cat).label }} fields yet.</p>
+          }
         </div>
-      }
+      </div>
+    } @else {
+      <div class="vid-field-list">
+        <table class="vid-datatable">
+          <thead>
+            <tr><th scope="col">Field</th><th scope="col">Value</th></tr>
+          </thead>
+          <tbody>
+            @for (row of readRows(); track row.key) {
+              <tr>
+                <td>{{ row.label }}</td>
+                <td [class.vid-datatable__empty]="!row.value">{{ readValue(row) }}</td>
+              </tr>
+            } @empty {
+              <tr><td colspan="2" class="vid-datatable__empty">No {{ meta(cat).label }} fields yet.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
 
-      @for (field of cat.fields; track field.id) {
-        <app-field-control
-          [field]="field"
-          [values]="values()"
-          [edits]="edits()"
-          [highlightId]="highlighted()"
-          (edited)="onEdit($event)"
-          (removed)="removeField(cat, $event)"
-          (addSubField)="addSubField(cat, $event)"
-        />
-      }
-
-      @if (!cat.fields.length && !addingField()) {
-        <div class="vid-empty" style="border:none; padding:var(--space-6);">
-          <i class="ph ph-vault"></i>
-          <h4>No {{ meta(cat).label }} fields yet</h4>
-          <p>Use the &plus; above to add your first field. Nothing is shared until you explicitly grant access.</p>
-        </div>
-      }
-    </div>
-
-    @if (cat.fields.length) {
+    @if (cat.fields.length && viewMode() === 'form') {
       <div class="vid-save-bar" [class.vid-save-bar--dirty]="dirtyCount() > 0">
         <span class="vid-save-bar__status">
           @if (dirtyCount()) {

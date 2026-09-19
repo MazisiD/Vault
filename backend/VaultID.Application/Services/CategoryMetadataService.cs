@@ -47,6 +47,9 @@ public sealed class CategoryMetadataService(VaultStreamRepository repository)
                 f.AutocompleteToken,
                 f.Choices,
                 f.SortOrder,
-                BuildFields(state, categoryId, f.Id)))
+                BuildFields(state, categoryId, f.Id),
+                f.IsSecret,
+                f.ItemNoun,
+                f.IsItemTitle))
             .ToList();
 }

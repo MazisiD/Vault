@@ -4,9 +4,12 @@ import { catchError, of } from 'rxjs';
 import { VaultApiService } from '../../services/vault-api.service';
 import { AuthService } from '../../services/auth.service';
 import { SessionService } from '../../services/session.service';
-import { Category, VaultSummary } from '../../models';
+import { Category, CollectionItem, CollectionUpdate, FieldDefinition, VaultSummary } from '../../models';
 import { categoryMeta, fieldMeta } from '../../ui-meta';
 import { AddSubFieldEvent, FieldControlComponent, FieldEditEvent } from './field-control/field-control.component';
+import {
+  CollectionFieldComponent, CollectionItemEvent, CollectionValueEvent,
+} from './collection-field/collection-field.component';
 
 /** One field (or sub-field) matching the vault search box, with enough context to jump to it. */
 export interface FieldSearchHit {
@@ -17,6 +20,18 @@ export interface FieldSearchHit {
   fieldName: string;
   /** Display name of the owning group, when the hit is a sub-field. */
   parentName: string | null;
+}
+
+/** How the open category's values are laid out: as an editable form, or read-only cards/table. */
+export type VaultViewMode = 'form' | 'cards' | 'table';
+
+/** One label/value pair as shown by the read-only Cards and Table views. */
+export interface VaultReadRow {
+  key: string;
+  label: string;
+  value: string;
+  /** Secret values stay masked in the read-only views - there is no control there to reveal them. */
+  secret: boolean;
 }
 
 /**
@@ -36,6 +51,14 @@ export interface FieldSearchHit {
  * out one at a time. The backend still records a separate event per changed
  * field, so the activity feed remains field-level.
  *
+ * Collections (bank accounts, vehicles, emergency contacts) are edited against
+ * a working copy held here and submitted as their full contents, so adding an
+ * item and deleting it again before saving never reaches the server.
+ *
+ * The same values can be read three ways - as the editable Form, as Cards, or
+ * as a Table. Only Form edits; the other two are read-only presentations of
+ * exactly the same data.
+ *
  * This component only renders data and forwards user actions to the API
  * service - every guardrail (system categories, a field that still holds a
  * value, promoting a populated field to a group, value validation) is enforced
@@ -45,7 +68,7 @@ export interface FieldSearchHit {
 @Component({
   selector: 'app-vault',
   standalone: true,
-  imports: [FormsModule, FieldControlComponent],
+  imports: [FormsModule, FieldControlComponent, CollectionFieldComponent],
   templateUrl: './vault.component.html',
   styleUrl: './vault.component.css',
 })
@@ -60,9 +83,21 @@ export class VaultComponent {
   readonly selectedCategory = computed(() => this.categories().find((c) => c.id === this.selected()) ?? null);
   readonly values = signal<Record<string, string | null>>({});
   readonly edits = signal<Record<string, string>>({});
+  /** Collections as last loaded from the backend, keyed by the collection field's id. */
+  readonly collections = signal<Record<string, CollectionItem[]>>({});
+  /** The user's working copy of those collections, including items not yet saved. */
+  readonly draftCollections = signal<Record<string, CollectionItem[]>>({});
   readonly saving = signal(false);
   readonly message = signal('');
   readonly error = signal('');
+
+  /** Form edits; Cards and Table are read-only ways of looking at the same values. */
+  readonly viewMode = signal<VaultViewMode>('form');
+  readonly viewModes: { id: VaultViewMode; label: string; icon: string }[] = [
+    { id: 'form', label: 'Form', icon: 'ph-list' },
+    { id: 'cards', label: 'Cards', icon: 'ph-squares-four' },
+    { id: 'table', label: 'Table', icon: 'ph-table' },
+  ];
 
   /**
    * Fields whose pending edit genuinely differs from what is stored. Typing a
@@ -75,7 +110,19 @@ export class VaultComponent {
       .filter(([fieldId, value]) => (values[fieldId] ?? '') !== value)
       .map(([fieldId]) => fieldId);
   });
-  readonly dirtyCount = computed(() => this.dirtyFieldIds().length);
+
+  /**
+   * Collections the user has touched. A collection is compared as a whole -
+   * items reordered, added, deleted or edited all count - because that is the
+   * unit the backend is sent.
+   */
+  readonly dirtyCollectionIds = computed(() => {
+    const stored = this.collections();
+    return Object.keys(this.draftCollections())
+      .filter((id) => !sameItems(stored[id] ?? [], this.draftCollections()[id] ?? []));
+  });
+
+  readonly dirtyCount = computed(() => this.dirtyFieldIds().length + this.dirtyCollectionIds().length);
 
   /** Free-text vault search, matching field and sub-field names across every category. */
   readonly query = signal('');
@@ -146,6 +193,8 @@ export class VaultComponent {
     this.selected.set(null);
     this.values.set({});
     this.edits.set({});
+    this.collections.set({});
+    this.draftCollections.set({});
     this.saving.set(false);
     this.message.set('');
     this.error.set('');
@@ -270,12 +319,29 @@ export class VaultComponent {
     const userId = this.userId;
     if (!categoryId || !userId) {
       this.values.set({});
+      this.collections.set({});
+      this.draftCollections.set({});
       return;
     }
     this.api
       .getCategory(userId, categoryId)
       .pipe(catchError(() => of(null)))
-      .subscribe((v) => this.values.set(v?.fields ?? {}));
+      .subscribe((v) => {
+        this.values.set(v?.fields ?? {});
+        const stored = v?.collections ?? {};
+        this.collections.set(stored);
+        // Collections the user is already editing keep their working copy, for
+        // the same reason `edits` survives: a schema change must not throw away
+        // an item they have half filled in.
+        this.draftCollections.update((draft) => {
+          const next: Record<string, CollectionItem[]> = {};
+          for (const [collectionId, items] of Object.entries(stored)) {
+            const working = draft[collectionId];
+            next[collectionId] = working && !sameItems(items, working) ? working : cloneItems(items);
+          }
+          return next;
+        });
+      });
   }
 
   private fail(err: unknown, fallback: string): void {
@@ -295,29 +361,168 @@ export class VaultComponent {
     this.edits.update((e) => ({ ...e, [edit.fieldId]: edit.value }));
   }
 
+  // --- Collections ---
+
+  /** The working copy of one collection - what the user sees and edits. */
+  itemsOf(collectionId: string): CollectionItem[] {
+    return this.draftCollections()[collectionId] ?? [];
+  }
+
+  /** The same collection as last saved, so each row can tell what has changed. */
+  storedItemsOf(collectionId: string): CollectionItem[] {
+    return this.collections()[collectionId] ?? [];
+  }
+
+  onCollectionValue(event: CollectionValueEvent): void {
+    this.updateItems(event.collectionId, (items) =>
+      items.map((item) =>
+        item.itemId === event.itemId
+          ? { ...item, fields: { ...item.fields, [event.fieldId]: event.value } }
+          : item,
+      ),
+    );
+  }
+
+  /**
+   * Adds a blank item with a client-generated id. The backend treats an id it
+   * has not seen as new, so nothing needs to be reserved up front and an item
+   * added then deleted before saving never reaches the server.
+   */
+  addCollectionItem(event: CollectionItemEvent): void {
+    this.updateItems(event.collectionId, (items) => [...items, { itemId: newItemId(), fields: {} }]);
+  }
+
+  /** Copies an item's values into a new one - a second account at the same bank, say. */
+  duplicateCollectionItem(event: CollectionItemEvent): void {
+    this.updateItems(event.collectionId, (items) => {
+      const source = items.find((i) => i.itemId === event.itemId);
+      if (!source) {
+        return items;
+      }
+      return [...items, { itemId: newItemId(), fields: { ...source.fields } }];
+    });
+  }
+
+  removeCollectionItem(event: CollectionItemEvent): void {
+    this.updateItems(event.collectionId, (items) => items.filter((i) => i.itemId !== event.itemId));
+  }
+
+  private updateItems(collectionId: string, change: (items: CollectionItem[]) => CollectionItem[]): void {
+    this.draftCollections.update((draft) => ({
+      ...draft,
+      [collectionId]: change(draft[collectionId] ?? []),
+    }));
+  }
+
+  // --- Reading the category without editing it ---
+
+  isCollection(field: FieldDefinition): boolean {
+    return field.fieldType === 'Collection';
+  }
+
+  setViewMode(mode: VaultViewMode): void {
+    this.viewMode.set(mode);
+  }
+
+  /**
+   * Every value in the open category flattened to label/value pairs for the
+   * Cards and Table views: a group contributes one row per sub-field, and a
+   * collection one row per value of each of its items, prefixed so two bank
+   * accounts never read as one.
+   */
+  readonly readRows = computed<VaultReadRow[]>(() => {
+    const cat = this.visibleCategory();
+    if (!cat) {
+      return [];
+    }
+    const rows: VaultReadRow[] = [];
+    for (const field of cat.fields) {
+      const label = fieldMeta(field.name).displayName;
+      if (field.fieldType === 'Collection') {
+        this.itemsOf(field.id).forEach((item, index) => {
+          for (const child of field.children) {
+            rows.push({
+              key: `${item.itemId}-${child.id}`,
+              label: `${label} ${index + 1} \u203a ${fieldMeta(child.name).displayName}`,
+              value: item.fields[child.id] ?? '',
+              secret: !!child.isSecret,
+            });
+          }
+        });
+      } else if (field.children.length) {
+        for (const child of field.children) {
+          rows.push({
+            key: child.id,
+            label: `${label} \u203a ${fieldMeta(child.name).displayName}`,
+            value: this.currentValue(child.id),
+            secret: !!child.isSecret,
+          });
+        }
+      } else {
+        rows.push({ key: field.id, label, value: this.currentValue(field.id), secret: !!field.isSecret });
+      }
+    }
+    return rows;
+  });
+
+  private currentValue(fieldId: string): string {
+    return this.edits()[fieldId] ?? this.values()[fieldId] ?? '';
+  }
+
+  /** Read-only views never reveal a secret: there is no control there to toggle. */
+  readValue(row: VaultReadRow): string {
+    if (!row.value) {
+      return '\u2014';
+    }
+    if (!row.secret) {
+      return row.value;
+    }
+    return row.value.length <= 4
+      ? '\u2022'.repeat(row.value.length)
+      : '\u2022'.repeat(row.value.length - 4) + row.value.slice(-4);
+  }
+
+
   /**
    * Saves the whole category in one request. The backend validates every value
    * before writing any of them, so a single bad entry rejects the save instead
    * of leaving the category half-written, and it still records one event per
    * changed field so the activity feed names exactly what the user altered.
+   * Each touched collection goes along as its complete contents, which is how
+   * the backend learns that an item the user deleted is gone.
    */
   saveCategory(cat: Category): void {
     const fieldIds = this.dirtyFieldIds();
-    if (!fieldIds.length || this.saving()) {
+    const collectionIds = this.dirtyCollectionIds();
+    const changeCount = fieldIds.length + collectionIds.length;
+    if (!changeCount || this.saving()) {
       return;
     }
     const edits = this.edits();
+    const draft = this.draftCollections();
     const values = fieldIds.map((fieldId) => ({ fieldDefinitionId: fieldId, value: edits[fieldId] }));
+    const collections: CollectionUpdate[] = collectionIds.map((collectionId) => ({
+      fieldDefinitionId: collectionId,
+      items: (draft[collectionId] ?? []).map((item) => ({
+        itemId: item.itemId,
+        values: Object.entries(item.fields).map(([fieldDefinitionId, value]) => ({
+          fieldDefinitionId,
+          value: value ?? '',
+        })),
+      })),
+    }));
 
     this.saving.set(true);
-    this.api.updateCategoryFields(this.userId, cat.id, values).subscribe({
+    this.api.updateCategoryFields(this.userId, cat.id, { values, collections }).subscribe({
       next: (view) => {
         this.saving.set(false);
         this.edits.set({});
         this.values.set(view.fields ?? {});
+        this.collections.set(view.collections ?? {});
+        this.draftCollections.set(cloneCollections(view.collections ?? {}));
         this.error.set('');
         this.message.set(
-          `Saved ${fieldIds.length} change${fieldIds.length === 1 ? '' : 's'} to ${cat.name}. ` +
+          `Saved ${changeCount} change${changeCount === 1 ? '' : 's'} to ${cat.name}. ` +
             `Any organisation sharing ${cat.name} now sees them.`,
         );
       },
@@ -334,6 +539,7 @@ export class VaultComponent {
       return;
     }
     this.edits.set({});
+    this.draftCollections.set(cloneCollections(this.collections()));
     this.message.set('');
     this.error.set('');
   }
@@ -421,4 +627,37 @@ export class VaultComponent {
       error: (err) => this.fail(err, 'Could not remove that field.'),
     });
   }
+}
+
+/** Ids for items the user has just added, before the backend has seen them. */
+function newItemId(): string {
+  return crypto.randomUUID();
+}
+
+function cloneItems(items: readonly CollectionItem[]): CollectionItem[] {
+  return items.map((item) => ({ itemId: item.itemId, fields: { ...item.fields } }));
+}
+
+function cloneCollections(source: Record<string, CollectionItem[]>): Record<string, CollectionItem[]> {
+  return Object.fromEntries(Object.entries(source).map(([id, items]) => [id, cloneItems(items)]));
+}
+
+/**
+ * Whether two versions of a collection hold the same items in the same order
+ * with the same values - which is what decides if there is anything to save.
+ * A missing value and an empty one are treated alike, because that is how the
+ * backend stores them.
+ */
+function sameItems(left: readonly CollectionItem[], right: readonly CollectionItem[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((item, index) => {
+    const other = right[index];
+    if (item.itemId !== other.itemId) {
+      return false;
+    }
+    const keys = new Set([...Object.keys(item.fields), ...Object.keys(other.fields)]);
+    return [...keys].every((key) => (item.fields[key] ?? '') === (other.fields[key] ?? ''));
+  });
 }

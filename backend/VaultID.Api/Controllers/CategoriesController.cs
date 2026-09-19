@@ -50,7 +50,9 @@ public sealed class CategoriesController(CategorySchemaService schema) : Control
     {
         var field = await _schema.CreateFieldAsync(
             userId, categoryId,
-            new CreateFieldRequest(body.Name, body.FieldType, body.AutocompleteToken, body.Choices, body.ParentFieldDefinitionId),
+            new CreateFieldRequest(
+                body.Name, body.FieldType, body.AutocompleteToken, body.Choices,
+                body.ParentFieldDefinitionId, body.IsSecret, body.ItemNoun),
             ct);
         return Ok(field);
     }

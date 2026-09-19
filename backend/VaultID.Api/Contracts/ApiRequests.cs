@@ -12,8 +12,19 @@ public sealed record UpdateFieldBody(string Value);
 /// <summary>One field's new value inside a category-level save.</summary>
 public sealed record FieldValueBody(Guid FieldDefinitionId, string Value);
 
+/// <summary>One item of a collection, with the values it should hold after the save.</summary>
+public sealed record CollectionItemBody(Guid ItemId, IReadOnlyList<FieldValueBody> Values);
+
+/// <summary>
+/// The complete set of items a collection should hold after the save. Items the
+/// vault currently has but that are missing here are the ones the user deleted.
+/// </summary>
+public sealed record CollectionBody(Guid FieldDefinitionId, IReadOnlyList<CollectionItemBody> Items);
+
 /// <summary>Every edit the user made to one category, saved as one change.</summary>
-public sealed record UpdateCategoryFieldsBody(IReadOnlyList<FieldValueBody> Values);
+public sealed record UpdateCategoryFieldsBody(
+    IReadOnlyList<FieldValueBody> Values,
+    IReadOnlyList<CollectionBody>? Collections);
 
 public sealed record ShareBody(
     string OrganisationId,
@@ -71,6 +82,8 @@ public sealed record CreateFieldBody(
     FieldType? FieldType,
     string? AutocompleteToken,
     IReadOnlyList<string>? Choices,
-    Guid? ParentFieldDefinitionId);
+    Guid? ParentFieldDefinitionId,
+    bool IsSecret = false,
+    string? ItemNoun = null);
 
 public sealed record RenameFieldBody(string Name);

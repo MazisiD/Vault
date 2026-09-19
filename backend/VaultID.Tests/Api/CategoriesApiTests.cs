@@ -48,16 +48,18 @@ public sealed class CategoriesApiTests : IClassFixture<VaultIdWebApplicationFact
     }
 
     [Fact]
-    public async Task CreatingAVault_SeedsThreeSystemCategories()
+    public async Task CreatingAVault_SeedsTheSystemCategories()
     {
         var userId = _userId;
         var summary = await CreateVaultAsync(userId);
 
-        Assert.Equal(3, summary.Categories.Count);
+        Assert.Equal(5, summary.Categories.Count);
         Assert.All(summary.Categories, c => Assert.True(c.IsSystem));
         Assert.Contains(summary.Categories, c => c.Name == "Biographical");
-        Assert.Contains(summary.Categories, c => c.Name == "Health");
         Assert.Contains(summary.Categories, c => c.Name == "Educational");
+        Assert.Contains(summary.Categories, c => c.Name == "Financial");
+        Assert.Contains(summary.Categories, c => c.Name == "Health");
+        Assert.Contains(summary.Categories, c => c.Name == "Religious");
     }
 
     [Fact]

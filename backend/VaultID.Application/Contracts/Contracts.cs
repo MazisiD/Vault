@@ -16,20 +16,50 @@ public sealed record UpdateFieldRequest(Guid FieldDefinitionId, string Value);
 public sealed record FieldValueUpdate(Guid FieldDefinitionId, string Value);
 
 /// <summary>
+/// One item of a Collection field as the user wants it to stand after the save.
+/// A <paramref name="ItemId"/> the vault doesn't know yet is a newly added item.
+/// </summary>
+public sealed record CollectionItemUpdate(
+    Guid ItemId,
+    IReadOnlyList<FieldValueUpdate> Values);
+
+/// <summary>
+/// The complete desired contents of one Collection field. Items the vault
+/// currently holds but that are absent from <paramref name="Items"/> are the
+/// ones the user deleted, so the whole collection is saved as one picture
+/// rather than as a stream of add/remove calls.
+/// </summary>
+public sealed record CollectionUpdate(
+    Guid FieldDefinitionId,
+    IReadOnlyList<CollectionItemUpdate> Items);
+
+/// <summary>
 /// Every edit the user made to one category, saved as a single change. The
 /// whole set is validated before anything is written, so a category is never
-/// left half-saved, and one <c>FieldUpdated</c> event is still recorded per
-/// field that actually changed - the audit trail stays field-level even though
-/// the user saves a category at a time.
+/// left half-saved, and one event is still recorded per field that actually
+/// changed - the audit trail stays field-level even though the user saves a
+/// category at a time.
 /// </summary>
 public sealed record UpdateCategoryFieldsRequest(
     Guid CategoryId,
-    IReadOnlyList<FieldValueUpdate> Values);
+    IReadOnlyList<FieldValueUpdate> Values,
+    IReadOnlyList<CollectionUpdate>? Collections = null);
 
-/// <summary>Current values of one category, keyed by field definition id.</summary>
+/// <summary>One item of a Collection field, with the values it currently holds.</summary>
+public sealed record CollectionItemView(
+    Guid ItemId,
+    IReadOnlyDictionary<Guid, string?> Fields);
+
+/// <summary>
+/// Current values of one category. <paramref name="Fields"/> holds the values of
+/// ordinary fields and Group children, keyed by field definition id;
+/// <paramref name="Collections"/> holds the items of each Collection field,
+/// keyed by that collection's field definition id.
+/// </summary>
 public sealed record CategoryView(
     Guid CategoryId,
-    IReadOnlyDictionary<Guid, string?> Fields);
+    IReadOnlyDictionary<Guid, string?> Fields,
+    IReadOnlyDictionary<Guid, IReadOnlyList<CollectionItemView>> Collections);
 
 /// <summary>A category the vault currently defines (for the vault summary).</summary>
 public sealed record CategorySummary(Guid Id, string Name, bool IsSystem);
@@ -194,9 +224,9 @@ public sealed record DataQueryResult(
 public sealed record CreateCategoryRequest(string Name);
 
 /// <summary>
-/// Create one field (or Group) in a category. <paramref name="FieldType"/> is
-/// optional and defaults to <see cref="FieldType.Text"/>: the vault UI adds a
-/// field by name alone, and a field becomes a Group implicitly when the first
+/// Create one field (or container) in a category. <paramref name="FieldType"/>
+/// is optional and defaults to <see cref="FieldType.Text"/>: the vault UI adds
+/// a field by name alone, and a field becomes a Group implicitly when the first
 /// sub-field is added under it.
 /// </summary>
 public sealed record CreateFieldRequest(
@@ -204,7 +234,9 @@ public sealed record CreateFieldRequest(
     FieldType? FieldType,
     string? AutocompleteToken,
     IReadOnlyList<string>? Choices,
-    Guid? ParentFieldDefinitionId);
+    Guid? ParentFieldDefinitionId,
+    bool IsSecret = false,
+    string? ItemNoun = null);
 
 /// <summary>One category's full nested schema, as returned by the metadata endpoint.</summary>
 public sealed record CategorySchemaView(
@@ -223,4 +255,7 @@ public sealed record FieldDefinitionView(
     string? AutocompleteToken,
     IReadOnlyList<string>? Choices,
     int SortOrder,
-    IReadOnlyList<FieldDefinitionView> Children);
+    IReadOnlyList<FieldDefinitionView> Children,
+    bool IsSecret = false,
+    string? ItemNoun = null,
+    bool IsItemTitle = false);

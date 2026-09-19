@@ -58,6 +58,12 @@
   --vid-cat-edu: #6bb8c9;
   --vid-cat-edu-bg: color-mix(in srgb, var(--vid-cat-edu) 20%, var(--color-surface));
   --vid-cat-edu-text: color-mix(in srgb, var(--vid-cat-edu) 68%, var(--color-neutral-100));
+  --vid-cat-financial: #7fc094;
+  --vid-cat-financial-bg: color-mix(in srgb, var(--vid-cat-financial) 20%, var(--color-surface));
+  --vid-cat-financial-text: color-mix(in srgb, var(--vid-cat-financial) 68%, var(--color-neutral-100));
+  --vid-cat-religious: #c9a96b;
+  --vid-cat-religious-bg: color-mix(in srgb, var(--vid-cat-religious) 20%, var(--color-surface));
+  --vid-cat-religious-text: color-mix(in srgb, var(--vid-cat-religious) 68%, var(--color-neutral-100));
 
   /* Grant status — universal convention colors, used only as dots/text, never fills. */
   --vid-status-ok: var(--color-accent-300);
@@ -533,5 +539,57 @@ a { color: var(--color-accent); text-underline-offset: 3px; }
 .vid-subfieldrow { display: flex; align-items: center; gap: var(--space-2); }
 .vid-subfieldrow .input { flex: 1; min-width: 0; }
 .vid-sublabel { width: 140px; flex: none; margin: 0; font-size: 12px; color: var(--color-neutral-300); }
+
+/* A secret value sitting on screen as dots until its eye toggle is pressed. */
+.vid-masked { letter-spacing: 0.08em; cursor: pointer; }
+
+/* "+ Add bank account", "+ Add field" - a quiet text action that adds a row
+   rather than a button competing with Save. */
+.vid-addlink {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+  padding: 4px 0; border: none; background: transparent;
+  color: var(--color-accent-300); font: inherit; font-size: 13px; cursor: pointer;
+}
+.vid-addlink:hover { color: var(--color-accent-100); text-decoration: underline; }
+.vid-addlink:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: var(--radius-sm, 6px); }
+
+/* Form / Cards / Table - one set of values, three ways of reading it. */
+.vid-viewswitch {
+  display: flex; align-items: center; gap: 2px; flex: none;
+  padding: 2px; border-radius: 999px;
+  border: 1px solid var(--color-accent-600);
+  background: color-mix(in srgb, var(--color-accent-900) 60%, transparent);
+}
+.vid-viewswitch__option {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border: none; border-radius: 999px;
+  background: transparent; color: var(--color-accent-200);
+  font: inherit; font-size: 11px; cursor: pointer;
+}
+.vid-viewswitch__option:hover { color: var(--color-accent-100); }
+.vid-viewswitch__option--active { background: var(--color-accent-600); color: var(--color-accent-100); }
+.vid-viewswitch__option:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+
+/* Cards view: the same fields laid out as a grid of read-only summaries. */
+.vid-cardgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-3); }
+.vid-datacard {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: var(--space-3); border-radius: var(--radius-md);
+  border: 1px solid var(--color-neutral-700); background: color-mix(in srgb, var(--color-text) 3%, transparent);
+}
+.vid-datacard__label { font-size: 11px; color: var(--color-neutral-300); }
+.vid-datacard__value { font-size: 14px; overflow-wrap: anywhere; }
+.vid-datacard__value--empty { color: var(--color-neutral-600); }
+
+/* Table view: every field and sub-field on one line. */
+.vid-datatable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vid-datatable th, .vid-datatable td {
+  text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-neutral-700); vertical-align: top;
+}
+.vid-datatable th { font-size: 11px; font-weight: 500; color: var(--color-neutral-300); }
+.vid-datatable td:first-child { color: var(--color-neutral-300); width: 34%; }
+.vid-datatable tr:last-child td { border-bottom: none; }
+.vid-datatable__empty { color: var(--color-neutral-600); }
+
 
 .vid-notice--error { background: color-mix(in srgb, var(--vid-status-revoked) 14%, transparent); color: var(--vid-status-revoked); }

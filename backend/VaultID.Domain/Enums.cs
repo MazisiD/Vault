@@ -14,7 +14,20 @@ public enum FieldType
     Boolean,
     Choice,
     File,
-    Group
+
+    /// <summary>
+    /// A container holding exactly one set of sub-fields (an address, say).
+    /// Carries no value of its own - its children do.
+    /// </summary>
+    Group,
+
+    /// <summary>
+    /// A container whose children are a <em>template</em> rather than a single
+    /// set of values: the user adds as many items as they need (bank accounts,
+    /// vehicles, emergency contacts). Carries no value of its own; each item
+    /// holds one value per child definition, keyed by the item's own id.
+    /// </summary>
+    Collection
 }
 
 /// <summary>Lifecycle state of a permission grant (blueprint 4.4).</summary>

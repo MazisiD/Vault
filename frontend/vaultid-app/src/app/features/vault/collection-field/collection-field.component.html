@@ -1,0 +1,61 @@
+<div class="vid-fieldbox" [id]="anchorId" [class.vid-fieldrow--hit]="isHighlighted">
+  <div class="vid-fieldhead">
+    <span class="vid-fieldhead__label">{{ displayName }}</span>
+    <span class="vid-typebadge vid-typebadge--filled">{{ countLabel }}</span>
+    <button class="vid-iconbtn" [attr.aria-expanded]="expanded()"
+            [attr.aria-label]="(expanded() ? 'Collapse ' : 'Expand ') + displayName"
+            (click)="expanded.set(!expanded())">
+      <i class="ph ph-caret-down vid-caret" [class.vid-caret--open]="expanded()"></i>
+    </button>
+    <button class="vid-iconbtn" [attr.aria-label]="'Remove ' + displayName" (click)="removed.emit(field.id)">
+      <i class="ph ph-trash"></i>
+    </button>
+  </div>
+
+  @if (expanded()) {
+    <div class="vid-collection">
+      @for (item of items; track item.itemId; let i = $index) {
+        <div class="vid-collection-item">
+          <div class="vid-collection-item__head">
+            <button type="button" class="vid-collection-item__title"
+                    [attr.aria-expanded]="isItemExpanded(item.itemId)"
+                    (click)="toggleItem(item.itemId)">
+              <i class="ph ph-caret-down vid-caret" [class.vid-caret--open]="isItemExpanded(item.itemId)"></i>
+              {{ itemTitle(item, i) }}
+            </button>
+            <button class="vid-iconbtn" [attr.aria-label]="'Duplicate ' + itemTitle(item, i)"
+                    (click)="duplicate(item.itemId)">
+              <i class="ph ph-copy"></i>
+            </button>
+            <button class="vid-iconbtn" [attr.aria-label]="'Delete ' + itemTitle(item, i)"
+                    (click)="remove(item.itemId)">
+              <i class="ph ph-trash"></i>
+            </button>
+          </div>
+
+          @if (isItemExpanded(item.itemId)) {
+            <div class="vid-collection-item__body">
+              @for (child of field.children; track child.id) {
+                <app-field-control
+                  [field]="child"
+                  [values]="storedValuesOf(item.itemId)"
+                  [edits]="editsOf(item)"
+                  [idPrefix]="field.name + '-' + (i + 1)"
+                  [nested]="true"
+                  [schemaEditable]="false"
+                  (edited)="onEdit(item.itemId, $event)"
+                />
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="vid-collection-empty">{{ emptyLabel }}</p>
+      }
+
+      <button type="button" class="vid-addlink" (click)="add()">
+        <i class="ph ph-plus"></i>{{ addLabel }}
+      </button>
+    </div>
+  }
+</div>

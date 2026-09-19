@@ -72,48 +72,16 @@ public static class VaultProjector
                 state.Values.Remove(e.CategoryId);
                 break;
 
-            case FieldDefinitionCreated e:
-                state.FieldDefinitions[e.FieldDefinitionId] = new FieldDefinition
-                {
-                    Id = e.FieldDefinitionId,
-                    CategoryId = e.CategoryId,
-                    ParentFieldDefinitionId = e.ParentFieldDefinitionId,
-                    Name = e.Name,
-                    FieldType = e.FieldType,
-                    AutocompleteToken = e.AutocompleteToken,
-                    Choices = e.Choices,
-                    SortOrder = e.SortOrder
-                };
+            case FieldDefinitionCreated or FieldDefinitionUpdated or FieldDefinitionDeleted:
+                ApplySchemaChange(state, @event);
                 break;
 
-            case FieldDefinitionUpdated e when state.FieldDefinitions.TryGetValue(e.FieldDefinitionId, out var updatedField):
-                if (e.NewName is not null)
-                {
-                    updatedField.Name = e.NewName;
-                }
-
-                if (e.NewFieldType is { } newFieldType)
-                {
-                    updatedField.FieldType = newFieldType;
-                }
-
-                break;
-
-            case FieldDefinitionDeleted e:
-                if (state.FieldDefinitions.TryGetValue(e.FieldDefinitionId, out var deletedField))
-                {
-                    state.Values.TryGetValue(deletedField.CategoryId, out var owningBucket);
-                    owningBucket?.Remove(e.FieldDefinitionId);
-                }
-
-                state.FieldDefinitions.Remove(e.FieldDefinitionId);
+            case CollectionItemAdded or CollectionItemRemoved or CollectionItemFieldUpdated:
+                ApplyCollectionChange(state, @event);
                 break;
 
             case FieldUpdated e when state.FieldDefinitions.TryGetValue(e.FieldDefinitionId, out var field):
-                var bucket = state.Values.TryGetValue(field.CategoryId, out var existing)
-                    ? existing
-                    : state.Values[field.CategoryId] = new Dictionary<Guid, string?>();
-                bucket[e.FieldDefinitionId] = e.NewValue;
+                BucketFor(state.Values, field.CategoryId)[e.FieldDefinitionId] = e.NewValue;
                 break;
 
             case AgreementSigned e:
@@ -215,5 +183,127 @@ public static class VaultProjector
             default:
                 break;
         }
+    }
+
+    /// <summary>
+    /// Replays the events that reshape a category's schema. Deleting a field
+    /// also clears the data it was holding, wherever that data lives: a plain
+    /// field's value in the category bucket, a collection's items, or one
+    /// child's value inside every item of the collection that owns it.
+    /// </summary>
+    private static void ApplySchemaChange(VaultState state, DomainEvent @event)
+    {
+        switch (@event)
+        {
+            case FieldDefinitionCreated e:
+                state.FieldDefinitions[e.FieldDefinitionId] = new FieldDefinition
+                {
+                    Id = e.FieldDefinitionId,
+                    CategoryId = e.CategoryId,
+                    ParentFieldDefinitionId = e.ParentFieldDefinitionId,
+                    Name = e.Name,
+                    FieldType = e.FieldType,
+                    AutocompleteToken = e.AutocompleteToken,
+                    Choices = e.Choices,
+                    IsSecret = e.IsSecret,
+                    ItemNoun = e.ItemNoun,
+                    IsItemTitle = e.IsItemTitle,
+                    SortOrder = e.SortOrder
+                };
+                break;
+
+            case FieldDefinitionUpdated e when state.FieldDefinitions.TryGetValue(e.FieldDefinitionId, out var field):
+                field.Name = e.NewName ?? field.Name;
+                field.FieldType = e.NewFieldType ?? field.FieldType;
+                field.IsSecret = e.NewIsSecret ?? field.IsSecret;
+                field.ItemNoun = e.NewItemNoun ?? field.ItemNoun;
+                break;
+
+            case FieldDefinitionDeleted e:
+                if (state.FieldDefinitions.Remove(e.FieldDefinitionId, out var deleted))
+                {
+                    ClearDataOf(state, deleted);
+                }
+
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private static void ClearDataOf(VaultState state, FieldDefinition deleted)
+    {
+        state.Values.TryGetValue(deleted.CategoryId, out var categoryBucket);
+        categoryBucket?.Remove(deleted.Id);
+
+        if (state.CollectionItems.Remove(deleted.Id, out var orphanedItems))
+        {
+            foreach (var orphanedItemId in orphanedItems)
+            {
+                state.ItemValues.Remove(orphanedItemId);
+            }
+        }
+
+        if (deleted.ParentFieldDefinitionId is not { } ownerId)
+        {
+            return;
+        }
+
+        foreach (var itemId in state.ItemsOf(ownerId))
+        {
+            state.ItemValues.TryGetValue(itemId, out var itemBucket);
+            itemBucket?.Remove(deleted.Id);
+        }
+    }
+
+    /// <summary>
+    /// Replays the events that add, remove and edit the repeated items of a
+    /// Collection field, e.g. one of several bank accounts.
+    /// </summary>
+    private static void ApplyCollectionChange(VaultState state, DomainEvent @event)
+    {
+        switch (@event)
+        {
+            case CollectionItemAdded e:
+                var itemIds = BucketFor(state.CollectionItems, e.FieldDefinitionId);
+                if (!itemIds.Contains(e.ItemId))
+                {
+                    itemIds.Add(e.ItemId);
+                }
+
+                state.ItemValues.TryAdd(e.ItemId, new Dictionary<Guid, string?>());
+                break;
+
+            case CollectionItemRemoved e:
+                if (state.CollectionItems.TryGetValue(e.FieldDefinitionId, out var owningItemIds))
+                {
+                    owningItemIds.Remove(e.ItemId);
+                }
+
+                state.ItemValues.Remove(e.ItemId);
+                break;
+
+            case CollectionItemFieldUpdated e:
+                BucketFor(state.ItemValues, e.ItemId)[e.FieldDefinitionId] = e.NewValue;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    /// <summary>Returns the entry for <paramref name="key"/>, creating an empty one on first use.</summary>
+    private static TValue BucketFor<TKey, TValue>(Dictionary<TKey, TValue> source, TKey key)
+        where TKey : notnull
+        where TValue : new()
+    {
+        if (!source.TryGetValue(key, out var bucket))
+        {
+            bucket = new TValue();
+            source[key] = bucket;
+        }
+
+        return bucket;
     }
 }

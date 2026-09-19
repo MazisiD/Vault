@@ -28,14 +28,25 @@ export type ShareCodeStatus =
  * serializes it as a string (JsonStringEnumConverter, no naming policy) so
  * these values must match the C# member names exactly.
  */
-export type FieldType = 'Text' | 'LongText' | 'Number' | 'Date' | 'Boolean' | 'Choice' | 'File' | 'Group';
+export type FieldType =
+  | 'Text'
+  | 'LongText'
+  | 'Number'
+  | 'Date'
+  | 'Boolean'
+  | 'Choice'
+  | 'File'
+  | 'Group'
+  | 'Collection';
 
 /**
  * One field definition in a category's schema (dynamic-categories spec).
  * Mirrors `FieldDefinitionView` (backend/VaultID.Application/Contracts/Contracts.cs).
- * A field is nested one level inside a `Group` field via `children` (backed
- * by `parentFieldDefinitionId` server-side) - the spec allows only one level
- * of nesting.
+ * A field is nested one level inside a `Group` or `Collection` field via
+ * `children` (backed by `parentFieldDefinitionId` server-side) - the spec
+ * allows only one level of nesting. For a `Group` the children are the parts
+ * of a single value, e.g. an address; for a `Collection` they are the template
+ * every item repeats, e.g. one bank account.
  */
 export interface FieldDefinition {
   id: string;
@@ -48,6 +59,12 @@ export interface FieldDefinition {
   choices?: string[] | null;
   sortOrder: number;
   children: FieldDefinition[];
+  /** The value is masked until the owner reveals it, e.g. an ID number. */
+  isSecret?: boolean;
+  /** Only on a 'Collection': what one of its items is called, e.g. 'bank account'. */
+  itemNoun?: string | null;
+  /** Only on a child of a 'Collection': its value titles the item in a collapsed list. */
+  isItemTitle?: boolean;
 }
 
 /**
@@ -76,10 +93,39 @@ export interface VaultSummary {
   activeShareCount: number;
 }
 
-/** Current field values for one category, keyed by field-definition id. Mirrors `CategoryView`. */
+/** One item of a collection field, with the values it holds. Mirrors `CollectionItemView`. */
+export interface CollectionItem {
+  itemId: string;
+  fields: Record<string, string | null>;
+}
+
+/**
+ * Current field values for one category. Mirrors `CategoryView`. `fields` holds
+ * plain and group values keyed by field-definition id; `collections` holds the
+ * items of each collection field, keyed by that collection's id.
+ */
 export interface CategoryView {
   categoryId: string;
   fields: Record<string, string | null>;
+  collections: Record<string, CollectionItem[]>;
+}
+
+/** One field's new value inside a category-level save. */
+export interface FieldValueUpdate {
+  fieldDefinitionId: string;
+  value: string;
+}
+
+/** The complete set of items a collection should hold after the save. */
+export interface CollectionUpdate {
+  fieldDefinitionId: string;
+  items: { itemId: string; values: FieldValueUpdate[] }[];
+}
+
+/** Everything the user changed in one category, saved as a single request. */
+export interface UpdateCategoryFieldsRequest {
+  values: FieldValueUpdate[];
+  collections: CollectionUpdate[];
 }
 
 export interface Agreement {

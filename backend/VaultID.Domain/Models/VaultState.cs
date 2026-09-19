@@ -31,6 +31,18 @@ public sealed class VaultState
     /// <summary>Current field values, keyed by category id then field definition id.</summary>
     public Dictionary<Guid, Dictionary<Guid, string?>> Values { get; } = new();
 
+    /// <summary>
+    /// The items of each Collection field, in display order, keyed by the
+    /// collection's field definition id.
+    /// </summary>
+    public Dictionary<Guid, List<Guid>> CollectionItems { get; } = new();
+
+    /// <summary>
+    /// Values held by collection items, keyed by item id then by the child
+    /// field definition id the value belongs to.
+    /// </summary>
+    public Dictionary<Guid, Dictionary<Guid, string?>> ItemValues { get; } = new();
+
     /// <summary>All permission grants ever created, by id (active or not).</summary>
     public Dictionary<Guid, PermissionGrant> Grants { get; } = new();
 
@@ -53,12 +65,20 @@ public sealed class VaultState
             .OrderBy(f => f.SortOrder)
             .ToList();
 
-    /// <summary>Returns the direct children of a Group field, ordered.</summary>
+    /// <summary>Returns the direct children of a Group or Collection field, ordered.</summary>
     public IReadOnlyList<FieldDefinition> ChildrenOf(Guid parentFieldDefinitionId) =>
         FieldDefinitions.Values
             .Where(f => f.ParentFieldDefinitionId == parentFieldDefinitionId)
             .OrderBy(f => f.SortOrder)
             .ToList();
+
+    /// <summary>Returns a Collection field's item ids in display order, or empty if it has none.</summary>
+    public IReadOnlyList<Guid> ItemsOf(Guid collectionFieldDefinitionId) =>
+        CollectionItems.TryGetValue(collectionFieldDefinitionId, out var items) ? items : [];
+
+    /// <summary>Returns one collection item's values, or empty if it holds none.</summary>
+    public IReadOnlyDictionary<Guid, string?> GetItemValues(Guid itemId) =>
+        ItemValues.TryGetValue(itemId, out var values) ? values : new Dictionary<Guid, string?>();
 
     /// <summary>Finds the active grant for an organisation + category, if any.</summary>
     public PermissionGrant? FindActiveGrant(string organisationId, Guid categoryId, DateTimeOffset now) =>

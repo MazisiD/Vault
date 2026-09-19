@@ -96,55 +96,14 @@ public sealed class CategorySchemaService(VaultStreamRepository repository)
 
         // A sub-field added under a plain scalar field promotes that field to a
         // Group, so the UI never has to ask the user to pick "Group" up front.
-        FieldDefinition? parentToPromote = null;
-
-        if (request.ParentFieldDefinitionId is { } parentId)
-        {
-            if (!state.FieldDefinitions.TryGetValue(parentId, out var parent) || parent.CategoryId != categoryId)
-            {
-                throw new ValidationException($"Parent field '{parentId}' does not exist in this category.");
-            }
-
-            if (parent.ParentFieldDefinitionId is not null)
-            {
-                throw new ValidationException(
-                    $"'{parent.Name}' is already a sub-field; nesting is limited to one level.");
-            }
-
-            if (parent.FieldType != FieldType.Group)
-            {
-                var parentHasValue = state.GetCategoryValues(categoryId)
-                    .TryGetValue(parent.Id, out var parentValue) && parentValue is not null;
-
-                if (!CategorySchemaGuard.CanPromoteToGroup(parent, parentHasValue))
-                {
-                    throw new ConflictException(
-                        $"'{parent.Name}' already holds a value, so it cannot become a group of sub-fields. Clear it first.");
-                }
-
-                parentToPromote = parent;
-            }
-        }
-
-        if (request.AutocompleteToken is { } token && !AutocompleteTokens.IsValid(token))
-        {
-            throw new ValidationException($"'{token}' is not a recognised autocomplete token.");
-        }
-
-        if (fieldType == FieldType.Choice && (request.Choices is null || request.Choices.Count == 0))
-        {
-            throw new ValidationException("Choice fields require at least one choice.");
-        }
-
-        if (fieldType == FieldType.Group && request.ParentFieldDefinitionId is not null)
-        {
-            throw new ValidationException("Groups can only be nested one level deep; a Group cannot contain another Group.");
-        }
+        var parentToPromote = ResolveParentToPromote(state, categoryId, request);
+        ValidateNewField(fieldType, request);
 
         var sortOrder = state.FieldDefinitions.Values
             .Count(f => f.CategoryId == categoryId && f.ParentFieldDefinitionId == request.ParentFieldDefinitionId);
 
         var fieldId = Guid.NewGuid();
+        var itemNoun = fieldType == FieldType.Collection ? request.ItemNoun : null;
         var events = new List<DomainEvent>();
 
         if (parentToPromote is not null)
@@ -167,6 +126,8 @@ public sealed class CategorySchemaService(VaultStreamRepository repository)
             FieldType = fieldType,
             AutocompleteToken = request.AutocompleteToken,
             Choices = request.Choices,
+            IsSecret = request.IsSecret,
+            ItemNoun = itemNoun,
             SortOrder = sortOrder
         });
 
@@ -174,7 +135,73 @@ public sealed class CategorySchemaService(VaultStreamRepository repository)
 
         return new FieldDefinitionView(
             fieldId, categoryId, request.ParentFieldDefinitionId, request.Name,
-            fieldType, request.AutocompleteToken, request.Choices, sortOrder, []);
+            fieldType, request.AutocompleteToken, request.Choices, sortOrder, [],
+            request.IsSecret, itemNoun);
+    }
+
+    /// <summary>
+    /// Checks that the requested parent can actually take a sub-field and
+    /// returns it when adding this child turns it into a group, or null when
+    /// there is nothing to promote.
+    /// </summary>
+    private static FieldDefinition? ResolveParentToPromote(
+        VaultState state, Guid categoryId, CreateFieldRequest request)
+    {
+        if (request.ParentFieldDefinitionId is not { } parentId)
+        {
+            return null;
+        }
+
+        if (!state.FieldDefinitions.TryGetValue(parentId, out var parent) || parent.CategoryId != categoryId)
+        {
+            throw new ValidationException($"Parent field '{parentId}' does not exist in this category.");
+        }
+
+        if (parent.ParentFieldDefinitionId is not null)
+        {
+            throw new ValidationException(
+                $"'{parent.Name}' is already a sub-field; nesting is limited to one level.");
+        }
+
+        if (parent.IsContainer)
+        {
+            return null;
+        }
+
+        var parentHasValue = state.GetCategoryValues(categoryId)
+            .TryGetValue(parent.Id, out var parentValue) && parentValue is not null;
+
+        if (!CategorySchemaGuard.CanPromoteToGroup(parent, parentHasValue))
+        {
+            throw new ConflictException(
+                $"'{parent.Name}' already holds a value, so it cannot become a group of sub-fields. Clear it first.");
+        }
+
+        return parent;
+    }
+
+    private static void ValidateNewField(FieldType fieldType, CreateFieldRequest request)
+    {
+        if (request.AutocompleteToken is { } token && !AutocompleteTokens.IsValid(token))
+        {
+            throw new ValidationException($"'{token}' is not a recognised autocomplete token.");
+        }
+
+        if (fieldType == FieldType.Choice && (request.Choices is null || request.Choices.Count == 0))
+        {
+            throw new ValidationException("Choice fields require at least one choice.");
+        }
+
+        if (fieldType is FieldType.Group or FieldType.Collection && request.ParentFieldDefinitionId is not null)
+        {
+            throw new ValidationException(
+                "Containers can only be nested one level deep; a group or collection cannot contain another.");
+        }
+
+        if (fieldType == FieldType.Collection && string.IsNullOrWhiteSpace(request.ItemNoun))
+        {
+            throw new ValidationException("A collection needs a name for one of its items, e.g. 'bank account'.");
+        }
     }
 
     public async Task RenameFieldAsync(
@@ -200,7 +227,20 @@ public sealed class CategorySchemaService(VaultStreamRepository repository)
 
         var toDelete = new List<FieldDefinition> { field };
 
-        if (field.FieldType == FieldType.Group)
+        if (field.FieldType == FieldType.Collection)
+        {
+            // A collection's data lives in its items, not in the category's
+            // value bucket, so the "still holds data" check is the item count.
+            var itemCount = state.ItemsOf(fieldId).Count;
+            if (itemCount > 0)
+            {
+                throw new ConflictException(
+                    $"'{field.Name}' still has {itemCount} item(s). Remove them before deleting it.");
+            }
+
+            toDelete.AddRange(state.ChildrenOf(fieldId));
+        }
+        else if (field.FieldType == FieldType.Group)
         {
             var children = state.ChildrenOf(fieldId);
             if (!CategorySchemaGuard.CanCascadeDeleteGroup(children, HasValue, out var blockingChild))
@@ -222,9 +262,12 @@ public sealed class CategorySchemaService(VaultStreamRepository repository)
 
         // Removing a Group's last sub-field demotes it back to a plain Text
         // field - the mirror of the promotion in CreateFieldAsync - so it
-        // renders as an editable field again rather than an empty container.
+        // renders as an editable field again rather than an empty container. A
+        // Collection keeps its type: an empty collection is still a collection,
+        // waiting for the user to add the next item.
         if (field.ParentFieldDefinitionId is { } parentId
             && state.FieldDefinitions.TryGetValue(parentId, out var parent)
+            && parent.FieldType == FieldType.Group
             && state.ChildrenOf(parentId).Count == 1)
         {
             events.Add(new FieldDefinitionUpdated

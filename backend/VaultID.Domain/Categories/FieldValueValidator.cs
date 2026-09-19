@@ -22,9 +22,10 @@ public static class FieldValueValidator
         switch (field.FieldType)
         {
             case FieldType.Group:
+            case FieldType.Collection:
                 if (value is not null)
                 {
-                    error = $"'{field.Name}' is a Group field and can never hold a value directly.";
+                    error = $"'{field.Name}' is a {field.FieldType} field and can never hold a value directly.";
                     return false;
                 }
 

@@ -3,6 +3,7 @@ using System.Text;
 using VaultID.Application.Common;
 using VaultID.Application.Contracts;
 using VaultID.Application.EventSourcing;
+using VaultID.Domain;
 using VaultID.Domain.Categories;
 using VaultID.Domain.Events;
 using VaultID.Domain.Models;
@@ -52,17 +53,7 @@ public sealed class VaultService(
             var sortOrder = 0;
             foreach (var seedField in seedCategory.Fields)
             {
-                fields.Add(new FieldDefinition
-                {
-                    Id = Guid.NewGuid(),
-                    CategoryId = categoryId,
-                    ParentFieldDefinitionId = null,
-                    Name = seedField.Name,
-                    FieldType = seedField.FieldType,
-                    AutocompleteToken = null,
-                    Choices = null,
-                    SortOrder = sortOrder++
-                });
+                SeedField(fields, categoryId, parentId: null, seedField, sortOrder++);
             }
         }
 
@@ -76,6 +67,41 @@ public sealed class VaultService(
 
         await _repository.AppendAsync(request.UserId, state.Version, [created], ct);
         return await GetSummaryAsync(request.UserId, ct);
+    }
+
+    /// <summary>
+    /// Turns one catalog entry into a field definition with a fresh id, then
+    /// does the same for its sub-fields - the parts of a group, or the template
+    /// each item of a collection is made from.
+    /// </summary>
+    private static void SeedField(
+        List<FieldDefinition> fields,
+        Guid categoryId,
+        Guid? parentId,
+        CategoryCatalog.SeedField seed,
+        int sortOrder)
+    {
+        var id = Guid.NewGuid();
+        fields.Add(new FieldDefinition
+        {
+            Id = id,
+            CategoryId = categoryId,
+            ParentFieldDefinitionId = parentId,
+            Name = seed.Name,
+            FieldType = seed.FieldType,
+            AutocompleteToken = null,
+            Choices = null,
+            IsSecret = seed.Secret,
+            ItemNoun = seed.ItemNoun,
+            IsItemTitle = seed.IsItemTitle,
+            SortOrder = sortOrder
+        });
+
+        var childSortOrder = 0;
+        foreach (var child in seed.Children ?? [])
+        {
+            SeedField(fields, categoryId, id, child, childSortOrder++);
+        }
     }
 
     /// <summary>Returns a lightweight summary of the vault.</summary>
@@ -117,7 +143,25 @@ public sealed class VaultService(
             throw new NotFoundException($"Category '{categoryId}' not found.");
         }
 
-        return new CategoryView(categoryId, state.GetCategoryValues(categoryId));
+        return BuildCategoryView(state, categoryId);
+    }
+
+    /// <summary>
+    /// Assembles one category's owner-facing values: the ordinary fields, plus
+    /// the items of every Collection the category defines, each in the order the
+    /// user arranged them.
+    /// </summary>
+    private static CategoryView BuildCategoryView(VaultState state, Guid categoryId)
+    {
+        var collections = state.FieldDefinitions.Values
+            .Where(f => f.CategoryId == categoryId && f.FieldType == FieldType.Collection)
+            .ToDictionary(
+                f => f.Id,
+                f => (IReadOnlyList<CollectionItemView>)state.ItemsOf(f.Id)
+                    .Select(itemId => new CollectionItemView(itemId, state.GetItemValues(itemId)))
+                    .ToList());
+
+        return new CategoryView(categoryId, state.GetCategoryValues(categoryId), collections);
     }
 
     /// <summary>
@@ -143,6 +187,7 @@ public sealed class VaultService(
             state,
             fieldDefinition.CategoryId,
             [new FieldValueUpdate(request.FieldDefinitionId, request.Value)],
+            collections: null,
             ct);
     }
 
@@ -171,21 +216,28 @@ public sealed class VaultService(
             throw new NotFoundException($"Category '{request.CategoryId}' not found.");
         }
 
-        await ApplyFieldValuesAsync(userId, state, request.CategoryId, request.Values, ct);
+        await ApplyFieldValuesAsync(userId, state, request.CategoryId, request.Values, request.Collections, ct);
         return await GetCategoryAsync(userId, request.CategoryId, ct);
     }
 
     /// <summary>
     /// Validates every submitted value against its field definition, then
-    /// appends one FieldUpdated event per genuinely changed field in a single
-    /// write and propagates the change to organisations sharing the category.
-    /// Nothing is written unless all of the values are valid.
+    /// appends the whole category's changes in a single write and propagates
+    /// them to organisations sharing the category. Nothing is written unless
+    /// all of the values are valid.
+    /// <para>
+    /// Collections are submitted as the complete picture the user wants, so the
+    /// difference against what the vault currently holds is what gets recorded:
+    /// items that disappeared are removed, unfamiliar item ids are added, and
+    /// only genuinely changed item values produce an event.
+    /// </para>
     /// </summary>
     private async Task ApplyFieldValuesAsync(
         string userId,
         VaultState state,
         Guid categoryId,
         IReadOnlyList<FieldValueUpdate> values,
+        IReadOnlyList<CollectionUpdate>? collections,
         CancellationToken ct)
     {
         state.Values.TryGetValue(categoryId, out var currentValues);
@@ -195,14 +247,14 @@ public sealed class VaultService(
 
         foreach (var update in values)
         {
-            if (!state.FieldDefinitions.TryGetValue(update.FieldDefinitionId, out var fieldDefinition))
-            {
-                throw new ValidationException($"Field '{update.FieldDefinitionId}' does not exist.");
-            }
+            var fieldDefinition = RequireCategoryField(state, categoryId, update.FieldDefinitionId);
 
-            if (fieldDefinition.CategoryId != categoryId)
+            if (fieldDefinition.ParentFieldDefinitionId is { } ownerId
+                && state.FieldDefinitions.TryGetValue(ownerId, out var owner)
+                && owner.FieldType == FieldType.Collection)
             {
-                throw new ValidationException($"Field '{fieldDefinition.Name}' does not belong to this category.");
+                throw new ValidationException(
+                    $"'{fieldDefinition.Name}' belongs to the collection '{owner.Name}', so its value must be sent as part of an item.");
             }
 
             if (!FieldValueValidator.TryValidate(fieldDefinition, update.Value, out var error))
@@ -230,6 +282,11 @@ public sealed class VaultService(
             changedFieldIds.Add(update.FieldDefinitionId);
         }
 
+        foreach (var collection in collections ?? [])
+        {
+            CollectEventsForCollection(userId, state, categoryId, collection, events, changedFieldIds);
+        }
+
         if (events.Count == 0)
         {
             return;
@@ -243,6 +300,117 @@ public sealed class VaultService(
         // active share of this category. This appends a PropagationSent event
         // per changed field.
         await _notifications.PropagateFieldChangeAsync(userId, categoryId, changedFieldIds, ct);
+    }
+
+    /// <summary>
+    /// Works out what changed in one Collection field and records it: the items
+    /// the user dropped, the ones they added, and the values they edited.
+    /// </summary>
+    private static void CollectEventsForCollection(
+        string userId,
+        VaultState state,
+        Guid categoryId,
+        CollectionUpdate update,
+        List<DomainEvent> events,
+        List<Guid> changedFieldIds)
+    {
+        var collection = RequireCategoryField(state, categoryId, update.FieldDefinitionId);
+        if (collection.FieldType != FieldType.Collection)
+        {
+            throw new ValidationException($"'{collection.Name}' is not a collection, so it has no items.");
+        }
+
+        var template = state.ChildrenOf(collection.Id).ToDictionary(c => c.Id);
+        var existingItemIds = state.ItemsOf(collection.Id);
+        var submittedItemIds = update.Items.Select(i => i.ItemId).ToHashSet();
+
+        foreach (var removedItemId in existingItemIds.Where(id => !submittedItemIds.Contains(id)))
+        {
+            events.Add(new CollectionItemRemoved
+            {
+                VaultId = userId,
+                FieldDefinitionId = collection.Id,
+                ItemId = removedItemId
+            });
+            changedFieldIds.Add(collection.Id);
+        }
+
+        var sortOrder = 0;
+        foreach (var item in update.Items)
+        {
+            if (!existingItemIds.Contains(item.ItemId))
+            {
+                events.Add(new CollectionItemAdded
+                {
+                    VaultId = userId,
+                    FieldDefinitionId = collection.Id,
+                    ItemId = item.ItemId,
+                    SortOrder = sortOrder
+                });
+                changedFieldIds.Add(collection.Id);
+            }
+
+            CollectEventsForItem(userId, state, collection, template, item, events, changedFieldIds);
+            sortOrder++;
+        }
+    }
+
+    /// <summary>Records the values the user changed inside one collection item.</summary>
+    private static void CollectEventsForItem(
+        string userId,
+        VaultState state,
+        FieldDefinition collection,
+        IReadOnlyDictionary<Guid, FieldDefinition> template,
+        CollectionItemUpdate item,
+        List<DomainEvent> events,
+        List<Guid> changedFieldIds)
+    {
+        var currentItemValues = state.GetItemValues(item.ItemId);
+
+        foreach (var value in item.Values)
+        {
+            if (!template.TryGetValue(value.FieldDefinitionId, out var child))
+            {
+                throw new ValidationException(
+                    $"Field '{value.FieldDefinitionId}' is not part of the '{collection.Name}' collection.");
+            }
+
+            if (!FieldValueValidator.TryValidate(child, value.Value, out var error))
+            {
+                throw new ValidationException(error!);
+            }
+
+            currentItemValues.TryGetValue(value.FieldDefinitionId, out var oldValue);
+            if (string.Equals(oldValue, value.Value, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            events.Add(new CollectionItemFieldUpdated
+            {
+                VaultId = userId,
+                ItemId = item.ItemId,
+                FieldDefinitionId = value.FieldDefinitionId,
+                NewValue = value.Value,
+                OldValueHash = oldValue is null ? null : Hash(oldValue)
+            });
+            changedFieldIds.Add(value.FieldDefinitionId);
+        }
+    }
+
+    private static FieldDefinition RequireCategoryField(VaultState state, Guid categoryId, Guid fieldId)
+    {
+        if (!state.FieldDefinitions.TryGetValue(fieldId, out var field))
+        {
+            throw new ValidationException($"Field '{fieldId}' does not exist.");
+        }
+
+        if (field.CategoryId != categoryId)
+        {
+            throw new ValidationException($"Field '{field.Name}' does not belong to this category.");
+        }
+
+        return field;
     }
 
     private static string Hash(string value)

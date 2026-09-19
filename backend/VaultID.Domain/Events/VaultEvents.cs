@@ -50,7 +50,7 @@ public sealed record CategoryDeleted : DomainEvent
     public required Guid CategoryId { get; init; }
 }
 
-/// <summary>User adds a field (or Group) to one of their categories.</summary>
+/// <summary>User adds a field (or container) to one of their categories.</summary>
 public sealed record FieldDefinitionCreated : DomainEvent
 {
     public required Guid FieldDefinitionId { get; init; }
@@ -60,29 +60,76 @@ public sealed record FieldDefinitionCreated : DomainEvent
     public required FieldType FieldType { get; init; }
     public string? AutocompleteToken { get; init; }
     public IReadOnlyList<string>? Choices { get; init; }
+
+    /// <summary>Render this field's value masked until the owner reveals it.</summary>
+    public bool IsSecret { get; init; }
+
+    /// <summary>Singular noun for one item, on a Collection field.</summary>
+    public string? ItemNoun { get; init; }
+
+    /// <summary>This child's value names an item of its owning Collection.</summary>
+    public bool IsItemTitle { get; init; }
+
     public required int SortOrder { get; init; }
 }
 
 /// <summary>
 /// User changes a field definition's schema: a rename (<see cref="NewName"/>),
 /// a type change (<see cref="NewFieldType"/> - emitted when a scalar field is
-/// promoted to a Group because a sub-field was added under it), or both. A null
-/// property means "unchanged".
+/// promoted to a container because a sub-field was added under it), a change to
+/// whether the value is masked (<see cref="NewIsSecret"/>), or a change to a
+/// Collection's item noun (<see cref="NewItemNoun"/>). A null property means
+/// "unchanged".
 /// </summary>
 public sealed record FieldDefinitionUpdated : DomainEvent
 {
     public required Guid FieldDefinitionId { get; init; }
     public string? NewName { get; init; }
     public FieldType? NewFieldType { get; init; }
+    public bool? NewIsSecret { get; init; }
+    public string? NewItemNoun { get; init; }
 }
 
 /// <summary>
-/// User deletes a field definition (or one child of a cascading Group
+/// User deletes a field definition (or one child of a cascading container
 /// delete - one event per deleted definition).
 /// </summary>
 public sealed record FieldDefinitionDeleted : DomainEvent
 {
     public required Guid FieldDefinitionId { get; init; }
+}
+
+// =============================================================================
+// Collection items: a Collection field's children are a template, and the user
+// adds as many items as they need. An item is identified by its own id and
+// holds one value per child definition.
+// =============================================================================
+
+/// <summary>User adds one item to a Collection field (a bank account, a vehicle).</summary>
+public sealed record CollectionItemAdded : DomainEvent
+{
+    public required Guid FieldDefinitionId { get; init; }
+    public required Guid ItemId { get; init; }
+    public required int SortOrder { get; init; }
+}
+
+/// <summary>User removes one item from a Collection field, and every value it held.</summary>
+public sealed record CollectionItemRemoved : DomainEvent
+{
+    public required Guid FieldDefinitionId { get; init; }
+    public required Guid ItemId { get; init; }
+}
+
+/// <summary>
+/// User edits one field of one collection item. The old value is stored hashed,
+/// never in clear - the same audit rule as <see cref="FieldUpdated"/>.
+/// </summary>
+public sealed record CollectionItemFieldUpdated : DomainEvent
+{
+    public required Guid ItemId { get; init; }
+    public required Guid FieldDefinitionId { get; init; }
+    public required string NewValue { get; init; }
+    public string? OldValueHash { get; init; }
 }
 
 /// <summary>An organisation submits DPA terms to be shown to the user.</summary>

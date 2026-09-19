@@ -19,28 +19,29 @@ public static class CategorySchemaGuard
         !category.IsSystem && !hasFields;
 
     /// <summary>
-    /// A scalar field can be deleted only while it holds no value. A Group
-    /// field is always deletable by itself (its children are checked
-    /// separately via <see cref="CanCascadeDeleteGroup"/>).
+    /// A scalar field can be deleted only while it holds no value. A container
+    /// (Group or Collection) is always deletable by itself - it holds no value
+    /// of its own; what it contains is checked separately via
+    /// <see cref="CanCascadeDeleteGroup"/>.
     /// </summary>
     public static bool CanDeleteField(FieldDefinition field, bool hasValue) =>
-        field.FieldType == FieldType.Group || !hasValue;
+        field.IsContainer || !hasValue;
 
     /// <summary>
     /// A scalar field is promoted to a <see cref="FieldType.Group"/> the first
     /// time a sub-field is added under it. That is allowed only while the field
-    /// holds no value of its own, because a Group never carries a value - its
-    /// children do - so promoting a populated field would silently orphan data.
-    /// A field that is already a Group needs no promotion; a File field can
-    /// never become a container.
+    /// holds no value of its own, because a container never carries a value -
+    /// its children do - so promoting a populated field would silently orphan
+    /// data. A field that is already a container needs no promotion; a File
+    /// field can never become one.
     /// </summary>
     public static bool CanPromoteToGroup(FieldDefinition field, bool hasValue) =>
         field.FieldType != FieldType.File && !hasValue;
 
     /// <summary>
-    /// A Group field's delete cascades to its children only if every child is
-    /// itself deletable (holds no value). Returns the first blocking child (if
-    /// any) so the caller can report which field is holding data.
+    /// A container field's delete cascades to its children only if every child
+    /// is itself deletable (holds no value). Returns the first blocking child
+    /// (if any) so the caller can report which field is holding data.
     /// </summary>
     public static bool CanCascadeDeleteGroup(
         IReadOnlyList<FieldDefinition> children,
