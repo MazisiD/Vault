@@ -56,7 +56,7 @@ public sealed class OrganisationApiController(
 
         var result = await _dataAccess.QueryCategoryAsync(user, orgId, categoryId, Ip(), ct);
         return result.Allowed
-            ? Ok(new { user, result.CategoryId, result.Fields })
+            ? Ok(new { user, result.CategoryId, result.Fields, result.FieldNames })
             : Forbid403(result.DenialReason);
     }
 

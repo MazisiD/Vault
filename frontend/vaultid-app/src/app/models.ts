@@ -113,6 +113,18 @@ export interface CategoryView {
   collections: Record<string, CollectionItem[]>;
 }
 
+/**
+ * The org-facing category read (`GET v1/vault/{user}/categories/{categoryId}`) -
+ * distinct from `CategoryView` since it carries field names (there's no schema
+ * call on this side) and no collections.
+ */
+export interface OrganisationCategoryValues {
+  user: string;
+  categoryId: string;
+  fields: Record<string, string | null>;
+  fieldNames: Record<string, string>;
+}
+
 /** One field's new value inside a category-level save. */
 export interface FieldValueUpdate {
   fieldDefinitionId: string;

@@ -153,7 +153,7 @@
             <div class="avatar avatar--approved">{{ (row.displayName || row.userId || 'U').charAt(0) }}</div>
             <div>
               <h5>{{ row.displayName || row.userId || 'User' }}</h5>
-              <p>{{ row.fields[0].value || 'No data returned' }}</p>
+              <p>{{ row.fields.length }} field value{{ row.fields.length === 1 ? '' : 's' }} shared</p>
             </div>
           </div>
           <div class="org-list-meta">

@@ -48,7 +48,7 @@ public sealed class OrganisationDataAccessService(
         }
 
         await LogAccessedAsync(userId, organisationId, categoryId, fields.Keys.ToList(), ipAddress, state.Version, ct);
-        return new DataQueryResult(true, null, categoryId, fields);
+        return new DataQueryResult(true, null, categoryId, fields, FieldNamesFor(state, fields.Keys));
     }
 
     /// <summary>Returns a single field, resolving its owning category via the field's own FK, or a denial.</summary>
@@ -80,7 +80,7 @@ public sealed class OrganisationDataAccessService(
         }
 
         await LogAccessedAsync(userId, organisationId, categoryId, [fieldDefinitionId], ipAddress, state.Version, ct);
-        return new DataQueryResult(true, null, categoryId, result);
+        return new DataQueryResult(true, null, categoryId, result, FieldNamesFor(state, result.Keys));
     }
 
     /// <summary>
@@ -137,6 +137,11 @@ public sealed class OrganisationDataAccessService(
 
         return live.SelectMany(g => g.FieldDefinitionIds!).ToHashSet();
     }
+
+    private static IReadOnlyDictionary<Guid, string> FieldNamesFor(VaultState state, IEnumerable<Guid> fieldDefinitionIds) =>
+        fieldDefinitionIds
+            .Where(state.FieldDefinitions.ContainsKey)
+            .ToDictionary(id => id, id => state.FieldDefinitions[id].Name);
 
     private async Task LogAccessedAsync(
         string userId, string organisationId, Guid categoryId,

@@ -277,12 +277,17 @@ public sealed record WebhookSubscriptionView(
     string UserId,
     string CallbackUrl);
 
-/// <summary>Returned by the org-facing data query so the Api can map denial to a 403.</summary>
+/// <summary>
+/// Returned by the org-facing data query so the Api can map denial to a 403.
+/// <paramref name="FieldNames"/> lets the org's UI label each value by its
+/// field's actual name instead of the raw field-definition id.
+/// </summary>
 public sealed record DataQueryResult(
     bool Allowed,
     string? DenialReason,
     Guid CategoryId,
-    IReadOnlyDictionary<Guid, string?> Fields);
+    IReadOnlyDictionary<Guid, string?> Fields,
+    IReadOnlyDictionary<Guid, string>? FieldNames = null);
 
 // --- Category/field schema (dynamic-categories spec) ---
 

@@ -4,10 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   ActivityEntry, Agreement, Category, CategoryAgreementView, CategoryView, ConsentMethod, FieldDefinition, FieldType,
-  GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, OrganisationShareRequest, PendingShareRequest,
-  RegisterOrganisationRequest, SetCategoryAgreementRequest, ShareCode, ShareCodeRedemptionView, ShareDuration,
-  ShareRequest, UpdateCategoryFieldsRequest, UpdateOrganisationComplianceRequest, UpdateOrganisationProfileRequest,
-  VaultSummary,
+  GeneratedShareCode, GenerateShareCodeRequest, Grant, Organisation, OrganisationCategoryValues,
+  OrganisationShareRequest, PendingShareRequest, RegisterOrganisationRequest, SetCategoryAgreementRequest, ShareCode,
+  ShareCodeRedemptionView, ShareDuration, ShareRequest, UpdateCategoryFieldsRequest,
+  UpdateOrganisationComplianceRequest, UpdateOrganisationProfileRequest, VaultSummary,
 } from '../models';
 
 /**
@@ -215,8 +215,8 @@ export class VaultApiService {
     });
   }
 
-  getOrganisationCategory(organisationId: string, userId: string, categoryId: string): Observable<CategoryView> {
-    return this.http.get<CategoryView>(`${this.base}/v1/vault/${userId}/categories/${categoryId}`, {
+  getOrganisationCategory(organisationId: string, userId: string, categoryId: string): Observable<OrganisationCategoryValues> {
+    return this.http.get<OrganisationCategoryValues>(`${this.base}/v1/vault/${userId}/categories/${categoryId}`, {
       headers: { 'X-Org-Id': organisationId },
     });
   }

@@ -8,6 +8,71 @@ transparent, immutable activity feed.
 This document explains how to run **the whole system**. For details on an individual
 layer, see the README in each folder.
 
+## Problem Statement
+
+People constantly hand over personal data — name, ID number, health records, education
+history — to banks, universities, medical insurers, and other organisations, usually
+through one-off forms. Once submitted, that data disappears into the organisation's own
+systems: the individual has no way to see what was shared, with whom, for how long, or
+to revoke access later. There's no single place where a person can manage their personal
+information, control who can see specific categories of it, and audit every access —
+while organisations still need a trustworthy, verifiable way to request and consume that
+data (and prove they agreed to specific terms for holding it).
+
+## Approach
+
+VaultID flips the traditional model: instead of organisations holding and controlling
+personal data, individuals own a single vault, and organisations get scoped, time-boxed,
+revocable access to specific categories of it (Biographical, Health, Educational, etc.)
+— never blanket access to everything. Every state change is modelled as an event rather
+than an in-place update, so consent and access history are first-class, auditable facts
+rather than an afterthought bolted onto a CRUD system.
+
+## Solution
+
+- **Event-sourced vault**: every change to a user's data and every grant/revoke/renew
+  action is captured as an immutable event, projected into the current vault state, and
+  surfaced as a transparent activity/audit feed the user can inspect at any time.
+- **Category-based permission engine**: sharing happens at the category level under an
+  explicit data-processing agreement — a user picks an organisation, reviews what they're
+  agreeing to, and grants access for a defined duration; they can revoke or renew at any
+  time, and the backend enforces every rule.
+- **Two API surfaces**: a user-facing API (`/api/...`) for managing the vault, and an
+  organisation-facing API (`/v1/...`) that lets an approved organisation read only what's
+  been shared, verify a field without seeing its value, and subscribe to webhooks for
+  change propagation — never more than it was granted.
+- **Strict layered architecture**: a standalone data-access service layer with no
+  backend dependencies, a Domain layer with events/enums/category catalog, an
+  Application layer holding all business logic, and a thin API layer that's transport
+  only. The Angular frontend only renders data and surfaces backend rejections.
+- **Real auth**: Supabase Auth backs registration/login, JWTs are validated server-side,
+  and a custom guard ensures a signed-in user can never access another user's vault by
+  tampering with the URL.
+
+## Tech Stack
+
+**Backend**
+- C# / .NET 10, ASP.NET Core Web API (thin controllers, no business logic)
+- Custom event-sourcing (event store, projections) — no external ES framework
+- JWT bearer authentication (`Microsoft.AspNetCore.Authentication.JwtBearer`) validating Supabase-issued tokens
+- OpenAPI / Swagger UI (`Microsoft.AspNetCore.OpenApi`, `Swashbuckle.AspNetCore.SwaggerUI`)
+- In-memory persistence today, with an interface-based data-access layer (`VaultID.Services`) designed for a drop-in Supabase Postgres implementation
+- xUnit-style test project (`VaultID.Tests`) covering Domain/Application/Api
+
+**Frontend**
+- Angular 19 (standalone components, one component = folder with `.ts`/`.html`/`.css`/`.spec.ts`)
+- TypeScript, RxJS
+- `@supabase/supabase-js` for direct Auth calls (login/register/password reset)
+- Karma + Jasmine for unit tests
+
+**Auth & Data**
+- Supabase Auth (JWT issuance, email/password, password reset)
+- Supabase Postgres (schema in `supabase/`, migrations tracked in `supabase/migrations/`)
+
+**Tooling**
+- `run_vaultid.py` — one-shot Python script to install, build, and run backend + frontend together
+- Solution/workspace split via `.slnx` files (`VaultID.slnx`, `VaultID.Services.slnx`)
+
 ## Architecture (4 strictly separated layers)
 
 ```

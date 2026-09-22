@@ -3,7 +3,9 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { CategoryView, Grant, Organisation, OrganisationShareRequest, ShareCodeRedemptionView } from '../../models';
+import {
+  Grant, Organisation, OrganisationCategoryValues, OrganisationShareRequest, ShareCodeRedemptionView,
+} from '../../models';
 import { VaultApiService } from '../../services/vault-api.service';
 
 interface SharedDataRow {
@@ -195,9 +197,9 @@ export class OrganisationComponent {
       });
   }
 
-  private toSharedRow(grant: Grant, category: CategoryView): SharedDataRow {
+  private toSharedRow(grant: Grant, category: OrganisationCategoryValues): SharedDataRow {
     const entries = Object.entries(category.fields ?? {}).map(([fieldId, value]) => ({
-      label: `Field ${fieldId.slice(0, 8)}`,
+      label: category.fieldNames?.[fieldId] ?? `Field ${fieldId.slice(0, 8)}`,
       value: value ?? 'Not shared',
     }));
 
